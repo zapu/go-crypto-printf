@@ -78,15 +78,6 @@ type Signature struct {
 	outSubpackets []outputSubpacket
 }
 
-// func eddsaValueFromReader() (ret []byte, err error) {
-//	var buf [2]byte
-//	_, err = readFull(r, buf[:2])
-//	if err != nil {
-//		return nil, err
-//	}
-//	bits := binary.BigEndian.Uint16(buf)
-// }
-
 func (sig *Signature) parse(r io.Reader) (err error) {
 	// RFC 4880, section 5.2.3
 	var buf [5]byte
