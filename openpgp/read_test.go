@@ -488,7 +488,7 @@ func TestGnuS2KDummyEncryptionSubkey(t *testing.T) {
 
 func TestGNUS2KDummySigningSubkey(t *testing.T) {
 	key := testGnuS2KDummy(t, gnuDummyS2KPrivateKeyWithSigningSubkey, gnuDummyS2KPrivateKeyWithSigningSubkeyPassphrase, 2)
-	_ , err := trySigning(key)
+	_, err := trySigning(key)
 	if err != nil {
 		t.Fatal("Got a signing failure: %s\n", err)
 	}
@@ -580,6 +580,42 @@ func TestSignatureV3Message(t *testing.T) {
 	if md.Signature != nil {
 		t.Errorf("Did not expect a signature V4 back")
 		return
+	}
+	return
+}
+
+func TestEdDSA(t *testing.T) {
+	key, err := ReadArmoredKeyRing(strings.NewReader(eddsaPublicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sig, err := armor.Decode(strings.NewReader(eddsaSignature))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	md, err := ReadMessage(sig.Body, key, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	literalData, err := ioutil.ReadAll(md.UnverifiedBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We'll see a sig error here after reading in the UnverifiedBody above,
+	// if there was one to see.
+	if err = md.SignatureError; err != nil {
+		t.Fatal(err)
+	}
+
+	if md.Signature == nil {
+		t.Fatalf("No available signature after checking signature")
+	}
+
+	if string(literalData) != eddsaSignedMsg {
+		t.Fatal("got wrong signed message")
 	}
 	return
 }
@@ -918,3 +954,29 @@ wxSLXhuDL3EPy4MVw8HE0TixCvq082aIbS8UAWOCnaqUyQ==
 `
 
 const signingSubkeyPassphrase = "abcd"
+
+const eddsaPublicKey = `
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v2
+
+mDMEVcdzEhYJKwYBBAHaRw8BAQdABLH577R+X2tGKoTX7GVYInAoCPaSpsaJqA52
+nopSLsa0K0Vhcmx5IEFkb3B0ZXIgKFBXIGlzIGFiY2QpIDxlYXJseUBhZG9wdC5l
+cj6IeQQTFggAIQUCVcdzEgIbAwULCQgHAgYVCAkKCwIEFgIDAQIeAQIXgAAKCRBY
+ZCLvtzlOPSS/AQDVhDyt1Si33VqLEmtlKnLs/2Kvi9FeM7yKU3Faj5ki4AEAyaMO
+3LKLyzMhYn7GavsS2wlP6hpuw8Vavjk2kWE7iwA=
+=IE4q
+-----END PGP PUBLIC KEY BLOCK-----
+`
+
+const eddsaSignature = `-----BEGIN PGP MESSAGE-----
+Version: GnuPG v2
+
+owGbwMvMwCEWkaL0frulny3jaeckhtDjM5g9UnNy8hVSE4tyKhUSU/ILSlKLivUU
+PFKLUhUyixWK83NTFVxTXIIdFYpLCwryi0r0FEIyUhVKMjKLUvS4OuJYGMQ4GNhY
+mUBGMXBxCsDMP7GA4X/4JlF9p1uHWr2yn/o+l1uRdcFn6xp7zq2/PzDZyqr0h+xk
++J9mYZEyTzxYwov3+41tk1POxp2d4xzP7qhw+vSpjus5sswA
+=Eywk
+-----END PGP MESSAGE-----
+`
+
+const eddsaSignedMsg = "Hello early adopters. Here is some EdDSA support. The third.\n"
