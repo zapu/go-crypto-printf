@@ -66,7 +66,7 @@ type Signature struct {
 	RevocationReason     *uint8
 	RevocationReasonText string
 
-	// PolicyURI is an optional. See RFC 4880, Section 5.2.3.20 for details
+	// PolicyURI is optional. See RFC 4880, Section 5.2.3.20 for details
 	PolicyURI string
 
 	// MDC is set if this signature has a feature packet that indicates
