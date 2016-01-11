@@ -673,9 +673,9 @@ func (t teeHash) Write(b []byte) (n int, err error) {
 	return t.h.Write(b)
 }
 func (t teeHash) Sum(b []byte) []byte { return t.h.Sum(b) }
-func (t teeHash) Reset() { t.h.Reset() }
-func (t teeHash) Size() int { return t.h.Size() }
-func (t teeHash) BlockSize() int { return t.h.BlockSize() }
+func (t teeHash) Reset()              { t.h.Reset() }
+func (t teeHash) Size() int           { return t.h.Size() }
+func (t teeHash) BlockSize() int      { return t.h.BlockSize() }
 
 // userIdSignatureHash returns a Hash of the message that needs to be signed
 // to assert that pk is a valid key for id.
