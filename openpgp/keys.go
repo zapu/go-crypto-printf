@@ -350,12 +350,21 @@ EachPacket:
 		}
 		switch pkt := p.(type) {
 		case *packet.UserId:
+
+			// Make a new Identity object, that we might wind up throwing away.
+			// We'll only add it if we get a valid self-signature over this
+			// userID.
 			current = new(Identity)
 			current.Name = pkt.Id
 			current.UserId = pkt
 		case *packet.Signature:
+
+			// First handle the case of: a self-signature, and no previous self-signature
+			// verified for this UID.
 			if current != nil && current.SelfSignature == nil && (pkt.SigType == packet.SigTypePositiveCert || pkt.SigType == packet.SigTypeGenericCert) && pkt.IssuerKeyId != nil && *pkt.IssuerKeyId == e.PrimaryKey.KeyId {
 				if err = e.PrimaryKey.VerifyUserIdSignature(current.Name, e.PrimaryKey, pkt); err == nil {
+
+					// Only set this self-sig once. IT can't be overwritten.
 					current.SelfSignature = pkt
 
 					// NOTE(maxtaco) 2016.01.11
@@ -363,12 +372,17 @@ EachPacket:
 					// It's possible therefore for us to throw away `current` in the case
 					// no valid self-signatures were found. That's OK as long as there are
 					// other identies that make sense.
+					//
+					// NOTE! We might later see a revocation for this very same UID, and it
+					// won't be undone. We've preserved this feature from the original
+					// Google OpenPGP we forked from.
 					e.Identities[current.Name] = current
 				} else {
-					// We really should warn that there was a failure here. Not raise and error
+					// We really should warn that there was a failure here. Not raise an error
 					// since this really shouldn't be a fail-stop error.
 				}
 			} else if pkt.SigType == packet.SigTypeKeyRevocation {
+				// These revocations won't revoke UIDs as handled above, so lookout!
 				revocations = append(revocations, pkt)
 			} else if pkt.SigType == packet.SigTypeDirectSignature {
 				// TODO: RFC4880 5.2.1 permits signatures
