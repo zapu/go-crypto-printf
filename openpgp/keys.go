@@ -353,33 +353,22 @@ EachPacket:
 			current = new(Identity)
 			current.Name = pkt.Id
 			current.UserId = pkt
-			e.Identities[pkt.Id] = current
-
-			for {
-				p, err = packets.Next()
-				if err == io.EOF {
-					return nil, io.ErrUnexpectedEOF
-				} else if err != nil {
-					return nil, err
-				}
-
-				sig, ok := p.(*packet.Signature)
-				if !ok {
-					return nil, errors.StructuralError("user ID packet not followed by self-signature")
-				}
-
-				if (sig.SigType == packet.SigTypePositiveCert || sig.SigType == packet.SigTypeGenericCert) && sig.IssuerKeyId != nil && *sig.IssuerKeyId == e.PrimaryKey.KeyId {
-					if err = e.PrimaryKey.VerifyUserIdSignature(pkt.Id, e.PrimaryKey, sig); err == nil {
-						current.SelfSignature = sig
-						break
-					} else {
-						// Ignore it; some keys have busted self-sigs
-					}
-				}
-				current.Signatures = append(current.Signatures, sig)
-			}
 		case *packet.Signature:
-			if pkt.SigType == packet.SigTypeKeyRevocation {
+			if current != nil && current.SelfSignature == nil && (pkt.SigType == packet.SigTypePositiveCert || pkt.SigType == packet.SigTypeGenericCert) && pkt.IssuerKeyId != nil && *pkt.IssuerKeyId == e.PrimaryKey.KeyId {
+				if err = e.PrimaryKey.VerifyUserIdSignature(current.Name, e.PrimaryKey, pkt); err == nil {
+					current.SelfSignature = pkt
+
+					// NOTE(maxtaco) 2016.01.11
+					// Only register an identity once we've gotten a valid self-signature.
+					// It's possible therefore for us to throw away `current` in the case
+					// no valid self-signatures were found. That's OK as long as there are
+					// other identies that make sense.
+					e.Identities[current.Name] = current
+				} else {
+					// We really should warn that there was a failure here. Not raise and error
+					// since this really shouldn't be a fail-stop error.
+				}
+			} else if pkt.SigType == packet.SigTypeKeyRevocation {
 				revocations = append(revocations, pkt)
 			} else if pkt.SigType == packet.SigTypeDirectSignature {
 				// TODO: RFC4880 5.2.1 permits signatures
