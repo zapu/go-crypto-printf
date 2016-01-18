@@ -450,18 +450,20 @@ func addSubkey(e *Entity, packets *packet.Reader, pub *packet.PublicKey, priv *p
 		if err != nil {
 			return errors.StructuralError("subkey signature invalid: " + err.Error())
 		}
-		var ok bool
-		subKey.Sig, ok = p.(*packet.Signature)
+		sig, ok := p.(*packet.Signature)
 		if !ok {
 			return errors.StructuralError(fmt.Sprintf("subkey packet not followed by signature (got %T)", p))
 		}
-		if st := subKey.Sig.SigType; st != packet.SigTypeSubkeyBinding && st != packet.SigTypeSubkeyRevocation {
+		if st := sig.SigType; st != packet.SigTypeSubkeyBinding && st != packet.SigTypeSubkeyRevocation {
+
+			// Note(maxtaco):
 			// We used to error out here, but instead, let's fast-forward past
-			// packets that are in the wrong place (like misplaced 0x19 signatures)
+			// packets that are in the wrong place (like misplaced 0x13 signatures)
 			// until we get to one that works.  For a test case,
 			// see TestWithBadSubkeySignaturePackets.
 			continue
 		}
+		subKey.Sig = sig
 		err = e.PrimaryKey.VerifyKeySignature(subKey.PublicKey, subKey.Sig)
 		if err != nil {
 			return errors.StructuralError("subkey signature invalid: " + err.Error())
