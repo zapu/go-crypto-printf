@@ -438,6 +438,8 @@ func (pk *PublicKey) Serialize(w io.Writer) (err error) {
 	case PubKeyAlgoECDH:
 		length += pk.ec.byteLen()
 		length += pk.ecdh.byteLen()
+	case PubKeyAlgoEdDSA:
+		length += pk.edk.byteLen()
 	default:
 		panic("unknown public key algorithm")
 	}
