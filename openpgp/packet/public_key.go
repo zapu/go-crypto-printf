@@ -10,7 +10,6 @@ import (
 	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rsa"
 	"crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
@@ -25,6 +24,7 @@ import (
 	"github.com/agl/ed25519"
 	"github.com/keybase/go-crypto/openpgp/elgamal"
 	"github.com/keybase/go-crypto/openpgp/errors"
+	"github.com/keybase/go-crypto/rsa"
 )
 
 var (
@@ -315,7 +315,7 @@ func (pk *PublicKey) parseRSA(r io.Reader) (err error) {
 		return
 	}
 
-	if len(pk.e.bytes) > 3 {
+	if len(pk.e.bytes) > 7 {
 		err = errors.UnsupportedError("large public exponent")
 		return
 	}
@@ -325,7 +325,7 @@ func (pk *PublicKey) parseRSA(r io.Reader) (err error) {
 	}
 	for i := 0; i < len(pk.e.bytes); i++ {
 		rsa.E <<= 8
-		rsa.E |= int(pk.e.bytes[i])
+		rsa.E |= int64(pk.e.bytes[i])
 	}
 	pk.PublicKey = rsa
 	return
