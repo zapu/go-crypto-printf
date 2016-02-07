@@ -6,9 +6,9 @@ package packet
 
 import (
 	"bytes"
-	"crypto/rsa"
 	"encoding/hex"
 	"fmt"
+	"github.com/keybase/go-crypto/rsa"
 	"math/big"
 	"testing"
 )
