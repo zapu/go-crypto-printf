@@ -9,10 +9,10 @@ import (
 	"io"
 	"time"
 
-	"github.com/keybase/go-crypto/rsa"
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/packet"
+	"github.com/keybase/go-crypto/rsa"
 )
 
 // PublicKeyType is the armor type for a PGP public key.
@@ -108,7 +108,7 @@ func (e *Entity) encryptionKey(now time.Time) (Key, bool) {
 		// so this sort of thing is pretty important for encrypting to older keys.
 		//
 		if ((subkey.Sig.FlagsValid && subkey.Sig.FlagEncryptCommunications) ||
-		    (!subkey.Sig.FlagsValid && subkey.PublicKey.PubKeyAlgo == packet.PubKeyAlgoElGamal)) &&
+			(!subkey.Sig.FlagsValid && subkey.PublicKey.PubKeyAlgo == packet.PubKeyAlgoElGamal)) &&
 			subkey.PublicKey.PubKeyAlgo.CanEncrypt() &&
 			!subkey.Sig.KeyExpired(now) &&
 			(maxTime.IsZero() || subkey.Sig.CreationTime.After(maxTime)) {
@@ -146,8 +146,7 @@ func (e *Entity) signingKey(now time.Time) (Key, bool) {
 	candidateSubkey := -1
 
 	for i, subkey := range e.Subkeys {
-		if subkey.Sig.FlagsValid &&
-			subkey.Sig.FlagSign &&
+		if (!subkey.Sig.FlagsValid || subkey.Sig.FlagSign) &&
 			subkey.PrivateKey.PrivateKey != nil &&
 			subkey.PublicKey.PubKeyAlgo.CanSign() &&
 			!subkey.Sig.KeyExpired(now) {
@@ -164,8 +163,10 @@ func (e *Entity) signingKey(now time.Time) (Key, bool) {
 	// If we have no candidate subkey then we assume that it's ok to sign
 	// with the primary key.
 	i := e.primaryIdentity()
-	if (!i.SelfSignature.FlagsValid || i.SelfSignature.FlagSign &&
-		!i.SelfSignature.KeyExpired(now)) && e.PrivateKey.PrivateKey != nil {
+	if (!i.SelfSignature.FlagsValid || i.SelfSignature.FlagSign) &&
+		e.PrimaryKey.PubKeyAlgo.CanSign() &&
+		!i.SelfSignature.KeyExpired(now) &&
+		e.PrivateKey.PrivateKey != nil {
 		return Key{e, e.PrimaryKey, e.PrivateKey, i.SelfSignature}, true
 	}
 
