@@ -9,10 +9,10 @@ import (
 	"io"
 	"time"
 
+	"github.com/keybase/go-crypto/rsa"
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/packet"
-	"github.com/keybase/go-crypto/rsa"
 )
 
 // PublicKeyType is the armor type for a PGP public key.
@@ -95,8 +95,8 @@ func (e *Entity) encryptionKey(now time.Time) (Key, bool) {
 	// Iterate the keys to find the newest key
 	var maxTime time.Time
 	for i, subkey := range e.Subkeys {
-		if subkey.Sig.FlagsValid &&
-			subkey.Sig.FlagEncryptCommunications &&
+		if ((subkey.Sig.FlagsValid && subkey.Sig.FlagEncryptCommunications) ||
+		    (!subkey.Sig.FlagsValid && subkey.PublicKey.PubKeyAlgo == packet.PubKeyAlgoElGamal)) &&
 			subkey.PublicKey.PubKeyAlgo.CanEncrypt() &&
 			!subkey.Sig.KeyExpired(now) &&
 			(maxTime.IsZero() || subkey.Sig.CreationTime.After(maxTime)) {
@@ -115,7 +115,7 @@ func (e *Entity) encryptionKey(now time.Time) (Key, bool) {
 	// assume that the primary key is ok. Or, if the primary key is
 	// marked as ok to encrypt to, then we can obviously use it.
 	i := e.primaryIdentity()
-	if !i.SelfSignature.FlagsValid || i.SelfSignature.FlagEncryptCommunications &&
+	if (!i.SelfSignature.FlagsValid || i.SelfSignature.FlagEncryptCommunications) &&
 		e.PrimaryKey.PubKeyAlgo.CanEncrypt() &&
 		!i.SelfSignature.KeyExpired(now) {
 		return Key{e, e.PrimaryKey, e.PrivateKey, i.SelfSignature}, true
