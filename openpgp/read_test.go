@@ -460,7 +460,7 @@ func openPrivateKey(t *testing.T, armoredKey string, passphrase string, protecte
 	return k
 }
 
-func testGnuS2KDummy(t *testing.T, keyString string, passphrase string, nSubkeys int) *Entity {
+func testSerializePrivate(t *testing.T, keyString string, passphrase string, nSubkeys int) *Entity {
 
 	key := openPrivateKey(t, keyString, passphrase, true, nSubkeys)
 
@@ -479,7 +479,7 @@ func testGnuS2KDummy(t *testing.T, keyString string, passphrase string, nSubkeys
 }
 
 func TestGnuS2KDummyEncryptionSubkey(t *testing.T) {
-	key := testGnuS2KDummy(t, gnuDummyS2KPrivateKey, gnuDummyS2KPrivateKeyPassphrase, 1)
+	key := testSerializePrivate(t, gnuDummyS2KPrivateKey, gnuDummyS2KPrivateKeyPassphrase, 1)
 	_, err := trySigning(key)
 	if err == nil {
 		t.Fatal("Expected a signing failure, since we don't have a signing key")
@@ -487,7 +487,7 @@ func TestGnuS2KDummyEncryptionSubkey(t *testing.T) {
 }
 
 func TestGNUS2KDummySigningSubkey(t *testing.T) {
-	key := testGnuS2KDummy(t, gnuDummyS2KPrivateKeyWithSigningSubkey, gnuDummyS2KPrivateKeyWithSigningSubkeyPassphrase, 2)
+	key := testSerializePrivate(t, gnuDummyS2KPrivateKeyWithSigningSubkey, gnuDummyS2KPrivateKeyWithSigningSubkeyPassphrase, 2)
 	_, err := trySigning(key)
 	if err != nil {
 		t.Fatal("Got a signing failure: %s\n", err)
@@ -676,7 +676,10 @@ func TestMultipleSigsPerUID(t *testing.T) {
 	if id.SelfSignature.CreationTime.Year() != 2016 {
 		t.Fatalf("Got wrong self sig (created at %v)", id.SelfSignature.CreationTime)
 	}
+}
 
+func TestSerializeElGamalPrivateSubkey(t *testing.T) {
+	testSerializePrivate(t, privateKeyWithElGamalSubkey, privateKeyWithElGamalSubkeyPassphrase, 1)
 }
 
 const testKey1KeyId = 0xA34D7E18C20C31BB
@@ -2602,3 +2605,49 @@ xj5wQ/XitmjdzDjG1/D2HsepxDGPLhh4SmvqHh3z5R7duTYGZq3i/hagsMYMM8ALV0ChPSdD
 d8zIhux6L3EfttG1zzl4xnQjXRBYZZjlIM4TjYP8dqsEkrRPBzWWgw==
 =u25j
 -----END PGP PUBLIC KEY BLOCK-----`
+
+const privateKeyWithElGamalSubkey = `-----BEGIN PGP PRIVATE KEY BLOCK-----
+Version: GnuPG v1
+
+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
+pu4=
+=PsgY
+-----END PGP PRIVATE KEY BLOCK-----`
+
+const privateKeyWithElGamalSubkeyPassphrase = `abcd`
