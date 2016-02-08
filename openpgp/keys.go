@@ -9,10 +9,10 @@ import (
 	"io"
 	"time"
 
-	"github.com/keybase/go-crypto/rsa"
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/packet"
+	"github.com/keybase/go-crypto/rsa"
 )
 
 // PublicKeyType is the armor type for a PGP public key.
@@ -108,7 +108,7 @@ func (e *Entity) encryptionKey(now time.Time) (Key, bool) {
 		// so this sort of thing is pretty important for encrypting to older keys.
 		//
 		if ((subkey.Sig.FlagsValid && subkey.Sig.FlagEncryptCommunications) ||
-		    (!subkey.Sig.FlagsValid && subkey.PublicKey.PubKeyAlgo == packet.PubKeyAlgoElGamal)) &&
+			(!subkey.Sig.FlagsValid && subkey.PublicKey.PubKeyAlgo == packet.PubKeyAlgoElGamal)) &&
 			subkey.PublicKey.PubKeyAlgo.CanEncrypt() &&
 			!subkey.Sig.KeyExpired(now) &&
 			(maxTime.IsZero() || subkey.Sig.CreationTime.After(maxTime)) {
