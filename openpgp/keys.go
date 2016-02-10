@@ -119,7 +119,7 @@ func (e *Entity) encryptionKey(now time.Time) (Key, bool) {
 			(!subkey.Sig.FlagsValid && subkey.PublicKey.PubKeyAlgo == packet.PubKeyAlgoElGamal)) &&
 			subkey.PublicKey.PubKeyAlgo.CanEncrypt() &&
 			!subkey.Sig.KeyExpired(now) &&
-			(subkey.Revocation == nil || subkey.Revocation.RevocationReason == nil) &&
+			subkey.Revocation == nil  &&
 			(maxTime.IsZero() || subkey.Sig.CreationTime.After(maxTime)) {
 			candidateSubkey = i
 			maxTime = subkey.Sig.CreationTime
@@ -158,7 +158,7 @@ func (e *Entity) signingKey(now time.Time) (Key, bool) {
 		if (!subkey.Sig.FlagsValid || subkey.Sig.FlagSign) &&
 			subkey.PrivateKey.PrivateKey != nil &&
 			subkey.PublicKey.PubKeyAlgo.CanSign() &&
-			(subkey.Revocation == nil || subkey.Revocation.RevocationReason == nil) &&
+			subkey.Revocation == nil &&
 			!subkey.Sig.KeyExpired(now) {
 			candidateSubkey = i
 			break
@@ -510,16 +510,22 @@ func addSubkey(e *Entity, packets *packet.Reader, pub *packet.PublicKey, priv *p
 		}
 		switch sig.SigType {
 		case packet.SigTypeSubkeyBinding:
-			subKey.Sig = sig
+			// First writer wins
+			if subKey.Sig == nil {
+				subKey.Sig = sig
+			}
 		case packet.SigTypeSubkeyRevocation:
-			subKey.Revocation = sig
+			// First writer wins
+			if subKey.Revocation == nil {
+				subKey.Revocation = sig
+			}
 		}
 	}
 	if subKey.Sig != nil {
 		e.Subkeys = append(e.Subkeys, subKey)
 	} else {
 		if lastErr == nil {
-			lastErr = errors.StructuralError("Subkey wasn't signed or revoked")
+			lastErr = errors.StructuralError("Subkey wasn't signed; expected a 'binding' signature")
 		}
 		e.BadSubkeys = append(e.BadSubkeys, BadSubkey{Subkey: subKey, Err: lastErr})
 	}
