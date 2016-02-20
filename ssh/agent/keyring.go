@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"sync"
 
-	"golang.org/x/crypto/ssh"
+	"github.com/keybase/go-crypto/ssh"
 )
 
 type privKey struct {
