@@ -150,6 +150,13 @@ func Iterated(out []byte, h hash.Hash, in []byte, salt []byte, count int) {
 	}
 }
 
+func maxInt(a, b int) int {
+	if a < b {
+		return b
+	}
+	return a
+}
+
 func parseGNUExtensions(r io.Reader) (f func(out, in []byte), err error) {
 	var buf [9]byte
 
@@ -178,7 +185,7 @@ func parseGNUExtensions(r io.Reader) (f func(out, in []byte), err error) {
 		}
 
 		var ivBuf [16]byte
-		ivLen := max(lenBuf[0], 16)
+		ivLen := maxInt(lenBuf[0], 16)
 		// For now we simply discard the IV
 		_, err = io.ReadFull(r, buf[:ivLen])
 		if err != nil {
