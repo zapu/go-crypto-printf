@@ -150,13 +150,6 @@ func Iterated(out []byte, h hash.Hash, in []byte, salt []byte, count int) {
 	}
 }
 
-func minInt(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func parseGNUExtensions(r io.Reader) (f func(out, in []byte), err error) {
 	var buf [9]byte
 
