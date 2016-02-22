@@ -150,6 +150,13 @@ func Iterated(out []byte, h hash.Hash, in []byte, salt []byte, count int) {
 	}
 }
 
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func parseGNUExtensions(r io.Reader) (f func(out, in []byte), err error) {
 	var buf [9]byte
 
@@ -168,11 +175,26 @@ func parseGNUExtensions(r io.Reader) (f func(out, in []byte), err error) {
 		return
 	}
 	gnuExtType := int(buf[0])
-	if gnuExtType != 1 {
-		return nil, errors.UnsupportedError("unknown S2K GNU protection mode: " + strconv.Itoa(int(gnuExtType)))
-	}
+	if gnuExtType == 1 {
+		return nil, nil
+	} else if gnuExtType == 2 {
+		var lenBuf [1]byte
+		_, err = io.ReadFull(r, buf[:1])
+		if err != nil {
+			return
+		}
 
-	return nil, nil
+		var ivBuf [16]byte
+		ivLen := minInt(lenBuf[0], 16)
+		// For now we simply discard the IV
+		_, err = io.ReadFull(r, buf[:ivLen])
+		if err != nil {
+			return
+		}
+
+		return nil, nil
+	}
+	return nil, errors.UnsupportedError("unknown S2K GNU protection mode: " + strconv.Itoa(int(gnuExtType)))
 }
 
 // Parse reads a binary specification for a string-to-key transformation from r
