@@ -8,9 +8,10 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/keybase/go-crypto/rsa"
 	"math/big"
 	"testing"
+
+	"github.com/keybase/go-crypto/rsa"
 )
 
 func bigFromBase10(s string) *big.Int {
