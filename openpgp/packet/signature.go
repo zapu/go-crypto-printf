@@ -535,6 +535,11 @@ func (sig *Signature) signPrepareHash(h hash.Hash) (digest []byte, err error) {
 // On success, the signature is stored in sig. Call Serialize to write it out.
 // If config is nil, sensible defaults will be used.
 func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err error) {
+	if priv.PrivateKey == nil {
+		err = errors.InvalidArgumentError("attempting to sign with nil PrivateKey")
+		return
+	}
+
 	sig.outSubpackets = sig.buildSubpackets()
 	digest, err := sig.signPrepareHash(h)
 	if err != nil {
