@@ -207,7 +207,9 @@ func Encrypt(ciphertext io.Writer, to []*Entity, signed *Entity, hints *FileHint
 	// If no preferences were specified, assume something safe and reasonable.
 	defaultCiphers := []uint8{
 		uint8(packet.CipherAES128),
+		uint8(packet.CipherAES192),
 		uint8(packet.CipherAES256),
+		uint8(packet.CipherCAST5),
 	}
 
 	defaultHashes := []uint8{
