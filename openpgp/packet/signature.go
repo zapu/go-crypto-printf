@@ -54,6 +54,7 @@ type Signature struct {
 
 	SigLifetimeSecs, KeyLifetimeSecs                        *uint32
 	PreferredSymmetric, PreferredHash, PreferredCompression []uint8
+	PreferredKeyServer                                      string
 	IssuerKeyId                                             *uint64
 	IsPrimaryId                                             *bool
 
@@ -217,6 +218,7 @@ const (
 	issuerSubpacket              signatureSubpacketType = 16
 	prefHashAlgosSubpacket       signatureSubpacketType = 21
 	prefCompressionSubpacket     signatureSubpacketType = 22
+	prefKeyServerSubpacket       signatureSubpacketType = 24
 	primaryUserIdSubpacket       signatureSubpacketType = 25
 	policyURISubpacket           signatureSubpacketType = 26
 	keyFlagsSubpacket            signatureSubpacketType = 27
@@ -408,6 +410,8 @@ func parseSignatureSubpacket(sig *Signature, subpacket []byte, isHashed bool) (r
 		if isCritical {
 			sig.StubbedOutCriticalError = errors.UnsupportedError("regex support is stubbed out")
 		}
+	case prefKeyServerSubpacket:
+		sig.PreferredKeyServer = string(subpacket[:])
 	default:
 		if isCritical {
 			err = errors.UnsupportedError("unknown critical signature subpacket type " + strconv.Itoa(int(packetType)))
