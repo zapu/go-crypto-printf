@@ -207,10 +207,17 @@ type signingKey interface {
 	serializeWithoutHeaders(io.Writer) error
 }
 
-func fromBig(n *big.Int) parsedMPI {
+func FromBig(n *big.Int) parsedMPI {
 	return parsedMPI{
 		bytes:     n.Bytes(),
 		bitLength: uint16(n.BitLen()),
+	}
+}
+
+func FromBytes(bytes []byte) parsedMPI {
+	return parsedMPI{
+		bytes:     bytes,
+		bitLength: uint16(8 * len(bytes)),
 	}
 }
 
@@ -220,8 +227,8 @@ func NewRSAPublicKey(creationTime time.Time, pub *rsa.PublicKey) *PublicKey {
 		CreationTime: creationTime,
 		PubKeyAlgo:   PubKeyAlgoRSA,
 		PublicKey:    pub,
-		n:            fromBig(pub.N),
-		e:            fromBig(big.NewInt(int64(pub.E))),
+		n:            FromBig(pub.N),
+		e:            FromBig(big.NewInt(int64(pub.E))),
 	}
 
 	pk.setFingerPrintAndKeyId()
@@ -234,10 +241,10 @@ func NewDSAPublicKey(creationTime time.Time, pub *dsa.PublicKey) *PublicKey {
 		CreationTime: creationTime,
 		PubKeyAlgo:   PubKeyAlgoDSA,
 		PublicKey:    pub,
-		p:            fromBig(pub.P),
-		q:            fromBig(pub.Q),
-		g:            fromBig(pub.G),
-		y:            fromBig(pub.Y),
+		p:            FromBig(pub.P),
+		q:            FromBig(pub.Q),
+		g:            FromBig(pub.G),
+		y:            FromBig(pub.Y),
 	}
 
 	pk.setFingerPrintAndKeyId()
@@ -260,9 +267,9 @@ func NewElGamalPublicKey(creationTime time.Time, pub *elgamal.PublicKey) *Public
 		CreationTime: creationTime,
 		PubKeyAlgo:   PubKeyAlgoElGamal,
 		PublicKey:    pub,
-		p:            fromBig(pub.P),
-		g:            fromBig(pub.G),
-		y:            fromBig(pub.Y),
+		p:            FromBig(pub.P),
+		g:            FromBig(pub.G),
+		y:            FromBig(pub.Y),
 	}
 
 	pk.setFingerPrintAndKeyId()

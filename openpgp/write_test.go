@@ -6,12 +6,14 @@ package openpgp
 
 import (
 	"bytes"
+	"crypto/rand"
 	"io"
 	"io/ioutil"
 	"testing"
 	"time"
 
 	"github.com/keybase/go-crypto/openpgp/packet"
+	"github.com/keybase/go-crypto/rsa"
 )
 
 func TestSignDetached(t *testing.T) {
@@ -48,6 +50,63 @@ func TestSignDetachedDSA(t *testing.T) {
 	}
 
 	testDetachedSignature(t, kring, out, signedInput, "check", testKey3KeyId)
+}
+
+type TestRSASigner struct {
+	PublicKeyId uint64
+	PrivateKey  *rsa.PrivateKey
+}
+
+func (s TestRSASigner) KeyId() uint64 {
+	return s.PublicKeyId
+}
+
+func (s TestRSASigner) PublicKeyAlgo() packet.PublicKeyAlgorithm {
+	return packet.PubKeyAlgoRSA
+}
+
+func (s TestRSASigner) Sign(sig *packet.Signature, msg []byte) (err error) {
+	h := sig.Hash.New()
+	h.Write(msg)
+	digest := h.Sum(nil)
+
+	sigBytes, err := rsa.SignPKCS1v15(rand.Reader, s.PrivateKey, sig.Hash, digest)
+	if err != nil {
+		return
+	}
+
+	sig.RSASignature = packet.FromBytes(sigBytes)
+
+	return
+}
+
+func TestSignWithSigner(t *testing.T) {
+	kring, err := ReadKeyRing(readerFromHex(testKeys1And2PrivateHex))
+	if err != nil {
+		t.Error(err)
+	}
+
+	signerSubkey, ok := kring[0].signingKey(time.Now())
+	if !ok {
+		t.Error("couldn't get signer subkey")
+	}
+
+	keyId := signerSubkey.PrivateKey.KeyId
+	privateKey := signerSubkey.PrivateKey.PrivateKey.(*rsa.PrivateKey)
+
+	signer := TestRSASigner{
+		PublicKeyId: keyId,
+		PrivateKey:  privateKey,
+	}
+
+	out := bytes.NewBuffer(nil)
+	message := bytes.NewBufferString(signedInput)
+	err = SignWithSigner(signer, out, message, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	testDetachedSignature(t, kring, out, signedInput, "check", testKey1KeyId)
 }
 
 func TestNewEntity(t *testing.T) {

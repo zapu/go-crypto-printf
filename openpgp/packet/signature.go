@@ -572,12 +572,32 @@ func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err e
 	case PubKeyAlgoECDSA:
 		r, s, err := ecdsa.Sign(config.Random(), priv.PrivateKey.(*ecdsa.PrivateKey), digest)
 		if err == nil {
-			sig.ECDSASigR = fromBig(r)
-			sig.ECDSASigS = fromBig(s)
+			sig.ECDSASigR = FromBig(r)
+			sig.ECDSASigS = FromBig(s)
 		}
 	default:
 		err = errors.UnsupportedError("public key algorithm: " + strconv.Itoa(int(sig.PubKeyAlgo)))
 	}
+
+	return
+}
+
+type Signer interface {
+	Sign(sig *Signature, msg []byte) error
+	KeyId() uint64
+	PublicKeyAlgo() PublicKeyAlgorithm
+}
+
+func (sig *Signature) SignWithSigner(s Signer, p *bytes.Buffer, h hash.Hash, config *Config) (err error) {
+	sig.outSubpackets = sig.buildSubpackets()
+	_, err = sig.signPrepareHash(h)
+	if err != nil {
+		return
+	}
+
+	p.Write(sig.HashSuffix)
+
+	err = s.Sign(sig, p.Bytes())
 
 	return
 }

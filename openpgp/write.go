@@ -5,6 +5,7 @@
 package openpgp
 
 import (
+	"bytes"
 	"crypto"
 	"hash"
 	"io"
@@ -57,6 +58,29 @@ func armoredDetachSign(w io.Writer, signer *Entity, message io.Reader, sigType p
 		return
 	}
 	return out.Close()
+}
+
+func SignWithSigner(s packet.Signer, w io.Writer, message io.Reader, config *packet.Config) (err error) {
+	keyId := s.KeyId()
+	sig := new(packet.Signature)
+	sig.SigType = packet.SigTypeBinary
+	sig.PubKeyAlgo = s.PublicKeyAlgo()
+	sig.Hash = config.Hash()
+	sig.CreationTime = config.Now()
+	sig.IssuerKeyId = &keyId
+
+	payload := bytes.NewBuffer(nil)
+	io.Copy(payload, message)
+
+	h := config.Hash().New()
+	h.Write(payload.Bytes())
+
+	err = sig.SignWithSigner(s, payload, h, config)
+	if err != nil {
+		return
+	}
+
+	return sig.Serialize(w)
 }
 
 func detachSign(w io.Writer, signer *Entity, message io.Reader, sigType packet.SignatureType, config *packet.Config) (err error) {
