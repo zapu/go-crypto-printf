@@ -441,7 +441,17 @@ EachPacket:
 				// directly on keys (eg. to bind additional
 				// revocation keys).
 			} else if current == nil {
-				return nil, errors.StructuralError("signature packet found before user id packet")
+				// NOTE(maxtaco)
+				//
+				// See https://github.com/keybase/client/issues/2666
+				//
+				// There might have been a user attribute picture before this signature,
+				// in which case this is still a valid PGP key. In the future we might
+				// not ignore user attributes (like picture). But either way, it doesn't
+				// make sense to bail out here. Keep looking for other valid signatures.
+				//
+				// Used to be:
+				//    return nil, errors.StructuralError("signature packet found before user id packet")
 			} else {
 				current.Signatures = append(current.Signatures, pkt)
 			}
