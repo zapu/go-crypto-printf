@@ -539,7 +539,9 @@ func (sig *Signature) signPrepareHash(h hash.Hash) (digest []byte, err error) {
 // On success, the signature is stored in sig. Call Serialize to write it out.
 // If config is nil, sensible defaults will be used.
 func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err error) {
-	if priv.PrivateKey == nil {
+	signer, hashIsSigner := h.(Signer)
+
+	if !hashIsSigner && priv.PrivateKey == nil {
 		err = errors.InvalidArgumentError("attempting to sign with nil PrivateKey")
 		return
 	}
@@ -547,6 +549,11 @@ func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err e
 	sig.outSubpackets = sig.buildSubpackets()
 	digest, err := sig.signPrepareHash(h)
 	if err != nil {
+		return
+	}
+
+	if hashIsSigner {
+		err = signer.Sign(sig)
 		return
 	}
 
@@ -583,23 +590,11 @@ func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err e
 }
 
 type Signer interface {
-	Sign(sig *Signature, msg []byte) error
+	hash.Hash
+	SetHashAlgorithm(hash crypto.Hash) error
+	Sign(sig *Signature) error
 	KeyId() uint64
 	PublicKeyAlgo() PublicKeyAlgorithm
-}
-
-func (sig *Signature) SignWithSigner(s Signer, p *bytes.Buffer, h hash.Hash, config *Config) (err error) {
-	sig.outSubpackets = sig.buildSubpackets()
-	_, err = sig.signPrepareHash(h)
-	if err != nil {
-		return
-	}
-
-	p.Write(sig.HashSuffix)
-
-	err = s.Sign(sig, p.Bytes())
-
-	return
 }
 
 // SignUserId computes a signature from priv, asserting that pub is a valid

@@ -6,12 +6,16 @@ package openpgp
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/rand"
+	"hash"
 	"io"
 	"io/ioutil"
+	"strconv"
 	"testing"
 	"time"
 
+	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/packet"
 	"github.com/keybase/go-crypto/rsa"
 )
@@ -53,6 +57,7 @@ func TestSignDetachedDSA(t *testing.T) {
 }
 
 type TestRSASigner struct {
+	hash.Hash
 	PublicKeyId uint64
 	PrivateKey  *rsa.PrivateKey
 }
@@ -65,10 +70,17 @@ func (s TestRSASigner) PublicKeyAlgo() packet.PublicKeyAlgorithm {
 	return packet.PubKeyAlgoRSA
 }
 
-func (s TestRSASigner) Sign(sig *packet.Signature, msg []byte) (err error) {
-	h := sig.Hash.New()
-	h.Write(msg)
-	digest := h.Sum(nil)
+func (s TestRSASigner) SetHashAlgorithm(h crypto.Hash) (err error) {
+	if h.Available() {
+		s.Hash = h.New()
+	} else {
+		err = errors.UnsupportedError("hash not available: " + strconv.Itoa(int(h)))
+	}
+	return
+}
+
+func (s TestRSASigner) Sign(sig *packet.Signature) (err error) {
+	digest := s.Sum(nil)
 
 	sigBytes, err := rsa.SignPKCS1v15(rand.Reader, s.PrivateKey, sig.Hash, digest)
 	if err != nil {
@@ -101,7 +113,7 @@ func TestSignWithSigner(t *testing.T) {
 
 	out := bytes.NewBuffer(nil)
 	message := bytes.NewBufferString(signedInput)
-	err = SignWithSigner(signer, out, message, nil)
+	err = SignWithSigner(signer, out, message, packet.SigTypeBinary, nil)
 	if err != nil {
 		t.Error(err)
 	}
