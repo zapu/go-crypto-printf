@@ -28,6 +28,14 @@ const (
 	KeyFlagEncryptStorage
 )
 
+// Signer can be implemented by application code to do actual signing.
+type Signer interface {
+	hash.Hash
+	Sign(sig *Signature) error
+	KeyId() uint64
+	PublicKeyAlgo() PublicKeyAlgorithm
+}
+
 // Signature represents a signature. See RFC 4880, section 5.2.
 type Signature struct {
 	SigType    SignatureType
@@ -589,22 +597,46 @@ func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err e
 	return
 }
 
-type Signer interface {
-	hash.Hash
-	SetHashAlgorithm(hash crypto.Hash) error
-	Sign(sig *Signature) error
-	KeyId() uint64
-	PublicKeyAlgo() PublicKeyAlgorithm
-}
-
 // SignUserId computes a signature from priv, asserting that pub is a valid
 // key for the identity id.  On success, the signature is stored in sig. Call
 // Serialize to write it out.
 // If config is nil, sensible defaults will be used.
 func (sig *Signature) SignUserId(id string, pub *PublicKey, priv *PrivateKey, config *Config) error {
-	h, err := userIdSignatureHash(id, pub, sig.Hash)
+	if !sig.Hash.Available() {
+		return errors.UnsupportedError("hash function")
+	}
+	h := sig.Hash.New()
+
+	err := userIdSignatureHash(id, pub, h)
 	if err != nil {
 		return nil
+	}
+	return sig.Sign(h, priv, config)
+}
+
+// SignUserIdWithSigner computes a signature from priv, asserting that pub is a
+// valid key for the identity id.  On success, the signature is stored in sig.
+// Call Serialize to write it out.
+// If config is nil, sensible defaults will be used.
+func (sig *Signature) SignUserIdWithSigner(id string, pub *PublicKey, s Signer, config *Config) error {
+	err := userIdSignatureHash(id, pub, s)
+	if err != nil {
+		return nil
+	}
+	return sig.Sign(s, nil, config)
+}
+
+// SignKey computes a signature from priv, asserting that pub is a subkey. On
+// success, the signature is stored in sig. Call Serialize to write it out.
+// If config is nil, sensible defaults will be used.
+func (sig *Signature) SignKey(pub *PublicKey, priv *PrivateKey, config *Config) error {
+	if !sig.Hash.Available() {
+		return errors.UnsupportedError("hash function")
+	}
+	h := sig.Hash.New()
+
+	if err := keySignatureHash(&priv.PublicKey, pub, h); err != nil {
+		return err
 	}
 	return sig.Sign(h, priv, config)
 }
@@ -612,12 +644,11 @@ func (sig *Signature) SignUserId(id string, pub *PublicKey, priv *PrivateKey, co
 // SignKey computes a signature from priv, asserting that pub is a subkey. On
 // success, the signature is stored in sig. Call Serialize to write it out.
 // If config is nil, sensible defaults will be used.
-func (sig *Signature) SignKey(pub *PublicKey, priv *PrivateKey, config *Config) error {
-	h, err := keySignatureHash(&priv.PublicKey, pub, sig.Hash)
-	if err != nil {
+func (sig *Signature) SignKeyWithSigner(signeePubKey *PublicKey, signerPubKey *PublicKey, s Signer, config *Config) error {
+	if err := keySignatureHash(signerPubKey, signeePubKey, s); err != nil {
 		return err
 	}
-	return sig.Sign(h, priv, config)
+	return sig.Sign(s, nil, config)
 }
 
 // Serialize marshals sig to w. Sign, SignUserId or SignKey must have been

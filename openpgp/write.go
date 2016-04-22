@@ -68,11 +68,6 @@ func SignWithSigner(s packet.Signer, w io.Writer, message io.Reader, sigType pac
 	sig.CreationTime = config.Now()
 	sig.IssuerKeyId = &keyId
 
-	err = s.SetHashAlgorithm(sig.Hash)
-	if err != nil {
-		return
-	}
-
 	s.Reset()
 
 	wrapped := s.(hash.Hash)
