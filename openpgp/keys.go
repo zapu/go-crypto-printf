@@ -232,18 +232,27 @@ func (el EntityList) KeysByIdUsage(id uint64, requiredUsage byte) (keys []Key) {
 			continue
 		}
 
-		if key.SelfSignature.FlagsValid && requiredUsage != 0 {
+		if requiredUsage != 0 {
 			var usage byte
-			if key.SelfSignature.FlagCertify {
-				usage |= packet.KeyFlagCertify
-			}
-			if key.SelfSignature.FlagSign {
-				usage |= packet.KeyFlagSign
-			}
-			if key.SelfSignature.FlagEncryptCommunications {
+			if key.SelfSignature.FlagsValid {
+				if key.SelfSignature.FlagCertify {
+					usage |= packet.KeyFlagCertify
+				}
+				if key.SelfSignature.FlagSign {
+					usage |= packet.KeyFlagSign
+				}
+				if key.SelfSignature.FlagEncryptCommunications {
+					usage |= packet.KeyFlagEncryptCommunications
+				}
+				if key.SelfSignature.FlagEncryptStorage {
+					usage |= packet.KeyFlagEncryptStorage
+				}
+			} else if key.PublicKey.PubKeyAlgo == packet.PubKeyAlgoElGamal {
+				// We also need to handle the case where, although the sig's
+				// flags aren't valid, the key can is implicitly usable for
+				// encryption by virtue of being ElGamal. See also the comment
+				// in encryptionKey() above.
 				usage |= packet.KeyFlagEncryptCommunications
-			}
-			if key.SelfSignature.FlagEncryptStorage {
 				usage |= packet.KeyFlagEncryptStorage
 			}
 			if usage&requiredUsage != requiredUsage {
