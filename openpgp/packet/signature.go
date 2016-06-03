@@ -630,11 +630,10 @@ func (sig *Signature) SignUserIdWithSigner(id string, pub *PublicKey, s Signer, 
 // success, the signature is stored in sig. Call Serialize to write it out.
 // If config is nil, sensible defaults will be used.
 func (sig *Signature) SignKey(pub *PublicKey, priv *PrivateKey, config *Config) error {
-	if !sig.Hash.Available() {
-		return errors.UnsupportedError("hash function")
+	h, err := newKeySignatureHash(&priv.PublicKey, pub, sig.Hash)
+	if err != nil {
+		return err
 	}
-	h := sig.Hash.New()
-	keySignatureHash(&priv.PublicKey, pub, h)
 
 	return sig.Sign(h, priv, config)
 }

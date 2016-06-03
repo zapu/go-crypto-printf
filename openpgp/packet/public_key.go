@@ -669,16 +669,26 @@ func keySignatureHash(pk, signed signingKey, h hash.Hash) {
 	signed.serializeWithoutHeaders(h)
 }
 
+func newKeySignatureHash(pk, signed signingKey, hashFunc crypto.Hash) (h hash.Hash, err error) {
+	if !hashFunc.Available() {
+		return nil, errors.UnsupportedError("hash function")
+	}
+	h = hashFunc.New()
+
+	keySignatureHash(pk, signed, h)
+
+	return
+}
+
 // VerifyKeySignature returns nil iff sig is a valid signature, made by this
 // public key, of signed.
 func (pk *PublicKey) VerifyKeySignature(signed *PublicKey, sig *Signature) error {
-	if !sig.Hash.Available() {
-		return errors.UnsupportedError("hash function")
+	h, err := newKeySignatureHash(pk, signed, sig.Hash)
+	if err != nil {
+		return err
 	}
-	h := sig.Hash.New()
-	keySignatureHash(pk, signed, h)
 
-	if err := pk.VerifySignature(h, sig); err != nil {
+	if err = pk.VerifySignature(h, sig); err != nil {
 		return err
 	}
 
@@ -704,11 +714,9 @@ func (pk *PublicKey) VerifyKeySignature(signed *PublicKey, sig *Signature) error
 		// Verify the cross-signature. This is calculated over the same
 		// data as the main signature, so we cannot just recursively
 		// call signed.VerifyKeySignature(...)
-		if !sig.EmbeddedSignature.Hash.Available() {
-			return errors.UnsupportedError("hash function")
+		if h, err = newKeySignatureHash(pk, signed, sig.EmbeddedSignature.Hash); err != nil {
+			return errors.StructuralError("error while hashing for cross-signature: " + err.Error())
 		}
-		h := sig.EmbeddedSignature.Hash.New()
-		keySignatureHash(pk, signed, h)
 
 		if err := signed.VerifySignature(h, sig.EmbeddedSignature); err != nil {
 			return errors.StructuralError("error while verifying cross-signature: " + err.Error())
