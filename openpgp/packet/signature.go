@@ -634,10 +634,8 @@ func (sig *Signature) SignKey(pub *PublicKey, priv *PrivateKey, config *Config) 
 		return errors.UnsupportedError("hash function")
 	}
 	h := sig.Hash.New()
+	keySignatureHash(&priv.PublicKey, pub, h)
 
-	if err := keySignatureHash(&priv.PublicKey, pub, h); err != nil {
-		return err
-	}
 	return sig.Sign(h, priv, config)
 }
 
@@ -645,9 +643,8 @@ func (sig *Signature) SignKey(pub *PublicKey, priv *PrivateKey, config *Config) 
 // success, the signature is stored in sig. Call Serialize to write it out.
 // If config is nil, sensible defaults will be used.
 func (sig *Signature) SignKeyWithSigner(signeePubKey *PublicKey, signerPubKey *PublicKey, s Signer, config *Config) error {
-	if err := keySignatureHash(signerPubKey, signeePubKey, s); err != nil {
-		return err
-	}
+	keySignatureHash(signerPubKey, signeePubKey, s)
+
 	return sig.Sign(s, nil, config)
 }
 

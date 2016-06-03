@@ -661,14 +661,12 @@ func (pk *PublicKey) VerifySignatureV3(signed hash.Hash, sig *SignatureV3) (err 
 
 // keySignatureHash returns a Hash of the message that needs to be signed for
 // pk to assert a subkey relationship to signed.
-func keySignatureHash(pk, signed signingKey, h hash.Hash) (err error) {
-
+func keySignatureHash(pk, signed signingKey, h hash.Hash) {
 	// RFC 4880, section 5.2.4
 	pk.SerializeSignaturePrefix(h)
 	pk.serializeWithoutHeaders(h)
 	signed.SerializeSignaturePrefix(h)
 	signed.serializeWithoutHeaders(h)
-	return
 }
 
 // VerifyKeySignature returns nil iff sig is a valid signature, made by this
@@ -678,10 +676,8 @@ func (pk *PublicKey) VerifyKeySignature(signed *PublicKey, sig *Signature) error
 		return errors.UnsupportedError("hash function")
 	}
 	h := sig.Hash.New()
+	keySignatureHash(pk, signed, h)
 
-	if err := keySignatureHash(pk, signed, h); err != nil {
-		return err
-	}
 	if err := pk.VerifySignature(h, sig); err != nil {
 		return err
 	}
@@ -712,10 +708,8 @@ func (pk *PublicKey) VerifyKeySignature(signed *PublicKey, sig *Signature) error
 			return errors.UnsupportedError("hash function")
 		}
 		h := sig.EmbeddedSignature.Hash.New()
+		keySignatureHash(pk, signed, h)
 
-		if err := keySignatureHash(pk, signed, h); err != nil {
-			return errors.StructuralError("error while hashing for cross-signature: " + err.Error())
-		}
 		if err := signed.VerifySignature(h, sig.EmbeddedSignature); err != nil {
 			return errors.StructuralError("error while verifying cross-signature: " + err.Error())
 		}

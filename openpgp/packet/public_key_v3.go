@@ -236,10 +236,8 @@ func (pk *PublicKeyV3) VerifyKeySignatureV3(signed *PublicKeyV3, sig *SignatureV
 		return errors.UnsupportedError("hash function")
 	}
 	h := sig.Hash.New()
+	keySignatureHash(pk, signed, h)
 
-	if err = keySignatureHash(pk, signed, h); err != nil {
-		return err
-	}
 	return pk.VerifySignatureV3(h, sig)
 }
 
