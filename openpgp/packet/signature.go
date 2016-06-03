@@ -602,7 +602,7 @@ func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err e
 // Serialize to write it out.
 // If config is nil, sensible defaults will be used.
 func (sig *Signature) SignUserId(id string, pub *PublicKey, priv *PrivateKey, config *Config) error {
-	h, err := newUserIdSignatureHash(id, pub, sig.Hash)
+	h, err := userIdSignatureHash(id, pub, sig.Hash)
 	if err != nil {
 		return nil
 	}
@@ -614,7 +614,7 @@ func (sig *Signature) SignUserId(id string, pub *PublicKey, priv *PrivateKey, co
 // Call Serialize to write it out.
 // If config is nil, sensible defaults will be used.
 func (sig *Signature) SignUserIdWithSigner(id string, pub *PublicKey, s Signer, config *Config) error {
-	userIdSignatureHash(id, pub, s)
+	updateUserIdSignatureHash(id, pub, s)
 
 	return sig.Sign(s, nil, config)
 }
@@ -623,7 +623,7 @@ func (sig *Signature) SignUserIdWithSigner(id string, pub *PublicKey, s Signer, 
 // success, the signature is stored in sig. Call Serialize to write it out.
 // If config is nil, sensible defaults will be used.
 func (sig *Signature) SignKey(pub *PublicKey, priv *PrivateKey, config *Config) error {
-	h, err := newKeySignatureHash(&priv.PublicKey, pub, sig.Hash)
+	h, err := keySignatureHash(&priv.PublicKey, pub, sig.Hash)
 	if err != nil {
 		return err
 	}
@@ -635,7 +635,7 @@ func (sig *Signature) SignKey(pub *PublicKey, priv *PrivateKey, config *Config) 
 // success, the signature is stored in sig. Call Serialize to write it out.
 // If config is nil, sensible defaults will be used.
 func (sig *Signature) SignKeyWithSigner(signeePubKey *PublicKey, signerPubKey *PublicKey, s Signer, config *Config) error {
-	keySignatureHash(signerPubKey, signeePubKey, s)
+	updateKeySignatureHash(signerPubKey, signeePubKey, s)
 
 	return sig.Sign(s, nil, config)
 }

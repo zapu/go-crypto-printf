@@ -661,7 +661,19 @@ func (pk *PublicKey) VerifySignatureV3(signed hash.Hash, sig *SignatureV3) (err 
 
 // keySignatureHash returns a Hash of the message that needs to be signed for
 // pk to assert a subkey relationship to signed.
-func keySignatureHash(pk, signed signingKey, h hash.Hash) {
+func keySignatureHash(pk, signed signingKey, hashFunc crypto.Hash) (h hash.Hash, err error) {
+	if !hashFunc.Available() {
+		return nil, errors.UnsupportedError("hash function")
+	}
+	h = hashFunc.New()
+
+	updateKeySignatureHash(pk, signed, h)
+
+	return
+}
+
+// updateKeySignatureHash does the actual hash updates for keySignatureHash.
+func updateKeySignatureHash(pk, signed signingKey, h hash.Hash) {
 	// RFC 4880, section 5.2.4
 	pk.SerializeSignaturePrefix(h)
 	pk.serializeWithoutHeaders(h)
@@ -669,21 +681,10 @@ func keySignatureHash(pk, signed signingKey, h hash.Hash) {
 	signed.serializeWithoutHeaders(h)
 }
 
-func newKeySignatureHash(pk, signed signingKey, hashFunc crypto.Hash) (h hash.Hash, err error) {
-	if !hashFunc.Available() {
-		return nil, errors.UnsupportedError("hash function")
-	}
-	h = hashFunc.New()
-
-	keySignatureHash(pk, signed, h)
-
-	return
-}
-
 // VerifyKeySignature returns nil iff sig is a valid signature, made by this
 // public key, of signed.
 func (pk *PublicKey) VerifyKeySignature(signed *PublicKey, sig *Signature) error {
-	h, err := newKeySignatureHash(pk, signed, sig.Hash)
+	h, err := keySignatureHash(pk, signed, sig.Hash)
 	if err != nil {
 		return err
 	}
@@ -713,7 +714,7 @@ func (pk *PublicKey) VerifyKeySignature(signed *PublicKey, sig *Signature) error
 		// Verify the cross-signature. This is calculated over the same
 		// data as the main signature, so we cannot just recursively
 		// call signed.VerifyKeySignature(...)
-		if h, err = newKeySignatureHash(pk, signed, sig.EmbeddedSignature.Hash); err != nil {
+		if h, err = keySignatureHash(pk, signed, sig.EmbeddedSignature.Hash); err != nil {
 			return errors.StructuralError("error while hashing for cross-signature: " + err.Error())
 		}
 		if err := signed.VerifySignature(h, sig.EmbeddedSignature); err != nil {
@@ -762,7 +763,20 @@ func (t teeHash) BlockSize() int      { return t.h.BlockSize() }
 
 // userIdSignatureHash returns a Hash of the message that needs to be signed
 // to assert that pk is a valid key for id.
-func userIdSignatureHash(id string, pk *PublicKey, h hash.Hash) {
+func userIdSignatureHash(id string, pk *PublicKey, hashFunc crypto.Hash) (h hash.Hash, err error) {
+	if !hashFunc.Available() {
+		return nil, errors.UnsupportedError("hash function")
+	}
+	h = hashFunc.New()
+
+	updateUserIdSignatureHash(id, pk, h)
+
+	return
+}
+
+// updateUserIdSignatureHash does the actual hash updates for
+// userIdSignatureHash.
+func updateUserIdSignatureHash(id string, pk *PublicKey, h hash.Hash) {
 	// RFC 4880, section 5.2.4
 	pk.SerializeSignaturePrefix(h)
 	pk.serializeWithoutHeaders(h)
@@ -779,21 +793,10 @@ func userIdSignatureHash(id string, pk *PublicKey, h hash.Hash) {
 	return
 }
 
-func newUserIdSignatureHash(id string, pk *PublicKey, hashFunc crypto.Hash) (h hash.Hash, err error) {
-	if !hashFunc.Available() {
-		return nil, errors.UnsupportedError("hash function")
-	}
-	h = hashFunc.New()
-
-	userIdSignatureHash(id, pk, h)
-
-	return
-}
-
 // VerifyUserIdSignature returns nil iff sig is a valid signature, made by this
 // public key, that id is the identity of pub.
 func (pk *PublicKey) VerifyUserIdSignature(id string, pub *PublicKey, sig *Signature) (err error) {
-	h, err := newUserIdSignatureHash(id, pub, sig.Hash)
+	h, err := userIdSignatureHash(id, pub, sig.Hash)
 	if err != nil {
 		return err
 	}

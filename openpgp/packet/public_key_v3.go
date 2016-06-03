@@ -232,7 +232,7 @@ func (pk *PublicKeyV3) VerifyUserIdSignatureV3(id string, pub *PublicKeyV3, sig 
 // VerifyKeySignatureV3 returns nil iff sig is a valid signature, made by this
 // public key, of signed.
 func (pk *PublicKeyV3) VerifyKeySignatureV3(signed *PublicKeyV3, sig *SignatureV3) (err error) {
-	h, err := newKeySignatureHash(pk, signed, sig.Hash)
+	h, err := keySignatureHash(pk, signed, sig.Hash)
 	if err != nil {
 		return err
 	}
