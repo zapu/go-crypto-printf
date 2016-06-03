@@ -236,7 +236,6 @@ func (pk *PublicKeyV3) VerifyKeySignatureV3(signed *PublicKeyV3, sig *SignatureV
 	if err != nil {
 		return err
 	}
-
 	return pk.VerifySignatureV3(h, sig)
 }
 

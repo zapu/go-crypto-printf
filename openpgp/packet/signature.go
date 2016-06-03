@@ -627,7 +627,6 @@ func (sig *Signature) SignKey(pub *PublicKey, priv *PrivateKey, config *Config) 
 	if err != nil {
 		return err
 	}
-
 	return sig.Sign(h, priv, config)
 }
 
