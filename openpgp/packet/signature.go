@@ -602,12 +602,7 @@ func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err e
 // Serialize to write it out.
 // If config is nil, sensible defaults will be used.
 func (sig *Signature) SignUserId(id string, pub *PublicKey, priv *PrivateKey, config *Config) error {
-	if !sig.Hash.Available() {
-		return errors.UnsupportedError("hash function")
-	}
-	h := sig.Hash.New()
-
-	err := userIdSignatureHash(id, pub, h)
+	h, err := newUserIdSignatureHash(id, pub, sig.Hash)
 	if err != nil {
 		return nil
 	}
@@ -619,10 +614,8 @@ func (sig *Signature) SignUserId(id string, pub *PublicKey, priv *PrivateKey, co
 // Call Serialize to write it out.
 // If config is nil, sensible defaults will be used.
 func (sig *Signature) SignUserIdWithSigner(id string, pub *PublicKey, s Signer, config *Config) error {
-	err := userIdSignatureHash(id, pub, s)
-	if err != nil {
-		return nil
-	}
+	userIdSignatureHash(id, pub, s)
+
 	return sig.Sign(s, nil, config)
 }
 
