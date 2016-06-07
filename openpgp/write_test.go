@@ -111,6 +111,55 @@ func TestSignWithSigner(t *testing.T) {
 	testDetachedSignature(t, kring, out, signedInput, "check", testKey1KeyId)
 }
 
+type TestErrorSigner struct {
+	TestRSASigner
+}
+
+func (s *TestErrorSigner) Sign(sig *packet.Signature) error {
+	return TestErrorSignerError("error from TestErrorSigner.Sign")
+}
+
+type TestErrorSignerError string
+
+func (e TestErrorSignerError) Error() string {
+	return string(e)
+}
+
+func TestSignerCanReturnErrors(t *testing.T) {
+	kring, err := ReadKeyRing(readerFromHex(testKeys1And2PrivateHex))
+	if err != nil {
+		t.Error(err)
+	}
+
+	signerSubkey, ok := kring[0].signingKey(time.Now())
+	if !ok {
+		t.Error("couldn't get signer subkey")
+	}
+
+	keyId := signerSubkey.PrivateKey.KeyId
+	privateKey := signerSubkey.PrivateKey.PrivateKey.(*rsa.PrivateKey)
+
+	signer := &TestErrorSigner{
+		TestRSASigner: TestRSASigner{
+			PublicKeyId: keyId,
+			PrivateKey:  privateKey,
+			Hash:        crypto.SHA256.New(),
+		},
+	}
+
+	out := bytes.NewBuffer(nil)
+	message := bytes.NewBufferString(signedInput)
+	err = SignWithSigner(signer, out, message, packet.SigTypeBinary, nil)
+	if err == nil {
+		t.Error("expecting error from TestErrorSigner.Sign")
+	}
+
+	_, isTestErrorSignerError := err.(TestErrorSignerError)
+	if !isTestErrorSignerError {
+		t.Error("was expecting error returned from TestErrorSigner.Sign")
+	}
+}
+
 func TestNewEntity(t *testing.T) {
 	if testing.Short() {
 		return
