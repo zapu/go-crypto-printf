@@ -549,7 +549,7 @@ func (sig *Signature) signPrepareHash(h hash.Hash) (digest []byte, err error) {
 func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err error) {
 	signer, hashIsSigner := h.(Signer)
 
-	if !hashIsSigner && priv.PrivateKey == nil {
+	if !hashIsSigner && (priv == nil || priv.PrivateKey == nil) {
 		err = errors.InvalidArgumentError("attempting to sign with nil PrivateKey")
 		return
 	}
