@@ -9,6 +9,8 @@ import (
 	"crypto"
 	"encoding/hex"
 	"testing"
+
+	"github.com/keybase/go-crypto/openpgp/errors"
 )
 
 func TestSignatureRead(t *testing.T) {
@@ -36,6 +38,36 @@ func TestSignatureReserialize(t *testing.T) {
 	expected, _ := hex.DecodeString(signatureDataHex)
 	if !bytes.Equal(expected, out.Bytes()) {
 		t.Errorf("output doesn't match input (got vs expected):\n%s\n%s", hex.Dump(out.Bytes()), hex.Dump(expected))
+	}
+}
+
+func TestSignWithNilPrivateKey(t *testing.T) {
+	sig := new(Signature)
+	hash := crypto.SHA256.New()
+
+	err := sig.Sign(hash, nil, nil)
+	if err == nil {
+		t.Error("expected error")
+		return
+	}
+
+	_, isInvalidArgumentError := err.(errors.InvalidArgumentError)
+	if !isInvalidArgumentError {
+		t.Error("expected InvalidArgumentError")
+		return
+	}
+
+	priv := new(PrivateKey)
+	err = sig.Sign(hash, priv, nil)
+	if err == nil {
+		t.Error("expected error")
+		return
+	}
+
+	_, isInvalidArgumentError = err.(errors.InvalidArgumentError)
+	if !isInvalidArgumentError {
+		t.Error("expected InvalidArgumentError")
+		return
 	}
 }
 

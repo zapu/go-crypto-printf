@@ -6,12 +6,16 @@ package openpgp
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/rand"
+	"hash"
 	"io"
 	"io/ioutil"
 	"testing"
 	"time"
 
 	"github.com/keybase/go-crypto/openpgp/packet"
+	"github.com/keybase/go-crypto/rsa"
 )
 
 func TestSignDetached(t *testing.T) {
@@ -48,6 +52,112 @@ func TestSignDetachedDSA(t *testing.T) {
 	}
 
 	testDetachedSignature(t, kring, out, signedInput, "check", testKey3KeyId)
+}
+
+type TestRSASigner struct {
+	hash.Hash
+	PublicKeyId uint64
+	PrivateKey  *rsa.PrivateKey
+}
+
+func (s *TestRSASigner) KeyId() uint64 {
+	return s.PublicKeyId
+}
+
+func (s *TestRSASigner) PublicKeyAlgo() packet.PublicKeyAlgorithm {
+	return packet.PubKeyAlgoRSA
+}
+
+func (s *TestRSASigner) Sign(sig *packet.Signature) (err error) {
+	digest := s.Sum(nil)
+
+	sigBytes, err := rsa.SignPKCS1v15(rand.Reader, s.PrivateKey, sig.Hash, digest)
+	if err != nil {
+		return
+	}
+
+	sig.RSASignature = packet.FromBytes(sigBytes)
+
+	return
+}
+
+func TestSignWithSigner(t *testing.T) {
+	kring, err := ReadKeyRing(readerFromHex(testKeys1And2PrivateHex))
+	if err != nil {
+		t.Error(err)
+	}
+
+	signerSubkey, ok := kring[0].signingKey(time.Now())
+	if !ok {
+		t.Error("couldn't get signer subkey")
+	}
+
+	keyId := signerSubkey.PrivateKey.KeyId
+	privateKey := signerSubkey.PrivateKey.PrivateKey.(*rsa.PrivateKey)
+
+	signer := &TestRSASigner{
+		PublicKeyId: keyId,
+		PrivateKey:  privateKey,
+		Hash:        crypto.SHA256.New(),
+	}
+
+	out := bytes.NewBuffer(nil)
+	message := bytes.NewBufferString(signedInput)
+	err = SignWithSigner(signer, out, message, packet.SigTypeBinary, nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	testDetachedSignature(t, kring, out, signedInput, "check", testKey1KeyId)
+}
+
+type TestErrorSigner struct {
+	TestRSASigner
+}
+
+func (s *TestErrorSigner) Sign(sig *packet.Signature) error {
+	return TestErrorSignerError("error from TestErrorSigner.Sign")
+}
+
+type TestErrorSignerError string
+
+func (e TestErrorSignerError) Error() string {
+	return string(e)
+}
+
+func TestSignerCanReturnErrors(t *testing.T) {
+	kring, err := ReadKeyRing(readerFromHex(testKeys1And2PrivateHex))
+	if err != nil {
+		t.Error(err)
+	}
+
+	signerSubkey, ok := kring[0].signingKey(time.Now())
+	if !ok {
+		t.Error("couldn't get signer subkey")
+	}
+
+	keyId := signerSubkey.PrivateKey.KeyId
+	privateKey := signerSubkey.PrivateKey.PrivateKey.(*rsa.PrivateKey)
+
+	signer := &TestErrorSigner{
+		TestRSASigner: TestRSASigner{
+			PublicKeyId: keyId,
+			PrivateKey:  privateKey,
+			Hash:        crypto.SHA256.New(),
+		},
+	}
+
+	out := bytes.NewBuffer(nil)
+	message := bytes.NewBufferString(signedInput)
+	err = SignWithSigner(signer, out, message, packet.SigTypeBinary, nil)
+	if err == nil {
+		t.Error("expecting error from TestErrorSigner.Sign")
+	}
+
+	_, isTestErrorSignerError := err.(TestErrorSignerError)
+	if !isTestErrorSignerError {
+		t.Error("was expecting error returned from TestErrorSigner.Sign")
+	}
 }
 
 func TestNewEntity(t *testing.T) {
