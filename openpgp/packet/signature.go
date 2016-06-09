@@ -630,9 +630,9 @@ func (sig *Signature) SignKey(pub *PublicKey, priv *PrivateKey, config *Config) 
 	return sig.Sign(h, priv, config)
 }
 
-// SignKey computes a signature from priv, asserting that pub is a subkey. On
-// success, the signature is stored in sig. Call Serialize to write it out.
-// If config is nil, sensible defaults will be used.
+// SignKeyWithSigner computes a signature using s, asserting that
+// signeePubKey is a subkey. On success, the signature is stored in sig. Call
+// Serialize to write it out. If config is nil, sensible defaults will be used.
 func (sig *Signature) SignKeyWithSigner(signeePubKey *PublicKey, signerPubKey *PublicKey, s Signer, config *Config) error {
 	updateKeySignatureHash(signerPubKey, signeePubKey, s)
 

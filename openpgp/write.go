@@ -59,6 +59,9 @@ func armoredDetachSign(w io.Writer, signer *Entity, message io.Reader, sigType p
 	return out.Close()
 }
 
+// SignWithSigner signs the message of type sigType with s and writes the
+// signature to w.
+// If config is nil, sensible defaults will be used.
 func SignWithSigner(s packet.Signer, w io.Writer, message io.Reader, sigType packet.SignatureType, config *packet.Config) (err error) {
 	keyId := s.KeyId()
 	sig := new(packet.Signature)
