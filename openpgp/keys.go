@@ -421,7 +421,7 @@ EachPacket:
 			// Section 5.2.3.3, if there are several self-signatures,
 			// we should take the newer one.
 			if current != nil &&
-				(current.SelfSignature == nil || pkt.CreationTime.After(current.SelfSignature.CreationTime)) &&
+				(current.SelfSignature == nil || !pkt.CreationTime.Before(current.SelfSignature.CreationTime)) &&
 				(pkt.SigType == packet.SigTypePositiveCert || pkt.SigType == packet.SigTypeGenericCert) &&
 				pkt.IssuerKeyId != nil &&
 				*pkt.IssuerKeyId == e.PrimaryKey.KeyId {
