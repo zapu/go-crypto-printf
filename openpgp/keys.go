@@ -427,7 +427,7 @@ EachPacket:
 			// then "last writer wins."
 			if current != nil &&
 				(current.SelfSignature == nil ||
-					!pkt.CreationTime.Before(current.SelfSignature.CreationTime) ||
+					pkt.CreationTime.After(current.SelfSignature.CreationTime) ||
 					(pkt.CreationTime.Equal(current.SelfSignature.CreationTime) &&
 						pkt.FlagsValid && !current.SelfSignature.FlagsValid)) &&
 				(pkt.SigType == packet.SigTypePositiveCert || pkt.SigType == packet.SigTypeGenericCert) &&
