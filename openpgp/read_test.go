@@ -558,6 +558,10 @@ func TestSignatureV4MessageYield(t *testing.T) {
 	testSignedV4Message(t, yieldSig, yieldKey)
 }
 
+func TestSignatureV4Spiros(t *testing.T) {
+	testSignedV4Message(t, spirosSig, spirosKey)
+}
+
 func testSignedV3Message(t *testing.T, armoredMsg string, armoredKey string) {
 	sig, err := armor.Decode(strings.NewReader(armoredMsg))
 	if err != nil {
@@ -629,6 +633,7 @@ func testSignedV4Message(t *testing.T, armoredMsg string, armoredKey string) {
 		return
 	}
 
+	fmt.Printf("MD WHAT THE %+v\n", md)
 	if md.Signature == nil {
 		t.Errorf("Expected a V4 signature back")
 		return
@@ -2155,3 +2160,89 @@ h0iZBUfeB/qRJ/CRqhGqHoulidYv2DaPVDz47OPvOjdj
 =clQL
 -----END PGP PUBLIC KEY BLOCK-----
 `
+
+const spirosSig =`-----BEGIN PGP MESSAGE-----
+Comment: GPGTools - https://gpgtools.org
+
+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
+=l8kM
+-----END PGP MESSAGE-----`
+
+const spirosKey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
+Comment: GPGTools - https://gpgtools.org
+
+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
+fIVTBJ4aGN+oB8E=
+=JZBP
+-----END PGP PUBLIC KEY BLOCK-----`

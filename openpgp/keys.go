@@ -7,6 +7,7 @@ package openpgp
 import (
 	"io"
 	"time"
+	"fmt"
 
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/keybase/go-crypto/openpgp/errors"
@@ -223,16 +224,22 @@ func (el EntityList) KeysById(id uint64) (keys []Key) {
 // the key usage given by requiredUsage.  The requiredUsage is expressed as
 // the bitwise-OR of packet.KeyFlag* values.
 func (el EntityList) KeysByIdUsage(id uint64, requiredUsage byte) (keys []Key) {
+	fmt.Printf("trying it...\n")
 	for _, key := range el.KeysById(id) {
+		fmt.Printf("here with %+v %+v\n", key, id)
 		if len(key.Entity.Revocations) > 0 {
+			fmt.Printf("early out A\n")
 			continue
 		}
 
 		if key.SelfSignature.RevocationReason != nil {
+			fmt.Printf("early out B\n")
 			continue
 		}
 
 		if requiredUsage != 0 {
+			fmt.Printf("required usage -> %d\n", requiredUsage)
+			fmt.Printf("key -> %+v\n", key.SelfSignature)
 			var usage byte
 			if key.SelfSignature.FlagsValid {
 				if key.SelfSignature.FlagCertify {
