@@ -2160,7 +2160,7 @@ h0iZBUfeB/qRJ/CRqhGqHoulidYv2DaPVDz47OPvOjdj
 -----END PGP PUBLIC KEY BLOCK-----
 `
 
-const spirosSig =`-----BEGIN PGP MESSAGE-----
+const spirosSig = `-----BEGIN PGP MESSAGE-----
 Comment: GPGTools - https://gpgtools.org
 
 owG9VmusG0cVvmkekIi2lCh/EC2VJcqP3kSzs7OviAC21/ZdJzuufdde7yIl7GPs
