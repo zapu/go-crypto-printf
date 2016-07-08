@@ -633,7 +633,6 @@ func testSignedV4Message(t *testing.T, armoredMsg string, armoredKey string) {
 		return
 	}
 
-	fmt.Printf("MD WHAT THE %+v\n", md)
 	if md.Signature == nil {
 		t.Errorf("Expected a V4 signature back")
 		return

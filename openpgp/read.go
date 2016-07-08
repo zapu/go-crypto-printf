@@ -11,7 +11,6 @@ import (
 	"hash"
 	"io"
 	"strconv"
-	"fmt"
 
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/keybase/go-crypto/openpgp/errors"
@@ -256,12 +255,9 @@ FindLiteralData:
 
 			md.IsSigned = true
 			md.SignedByKeyId = p.KeyId
-			fmt.Printf("keys by ID usage: %+v %+v %+v\n", keyring, p, packet.KeyFlagSign)
 			keys := keyring.KeysByIdUsage(p.KeyId, packet.KeyFlagSign)
 			if len(keys) > 0 {
 				md.SignedBy = &keys[0]
-			} else {
-				fmt.Printf("Well shit!\n")
 			}
 		case *packet.LiteralData:
 			md.LiteralData = p
