@@ -9,9 +9,9 @@ package armor // import "github.com/keybase/go-crypto/openpgp/armor"
 import (
 	"bufio"
 	"bytes"
-	"strings"
 	"encoding/base64"
 	"io"
+	"strings"
 
 	"github.com/keybase/go-crypto/openpgp/errors"
 )
