@@ -255,7 +255,10 @@ func (el EntityList) KeysByIdUsage(id uint64, requiredUsage byte) (keys []Key) {
 				usage |= packet.KeyFlagEncryptStorage
 			} else if key.PublicKey.PubKeyAlgo == packet.PubKeyAlgoDSA {
 				usage |= packet.KeyFlagSign
+			} else if key.Entity.PrimaryKey.KeyId == id {
+				usage = (packet.KeyFlagCertify | packet.KeyFlagSign | packet.KeyFlagEncryptCommunications | packet.KeyFlagEncryptStorage)
 			}
+
 			if usage&requiredUsage != requiredUsage {
 				continue
 			}
