@@ -233,7 +233,9 @@ func (el EntityList) KeysByIdUsage(id uint64, requiredUsage byte) (keys []Key) {
 
 		if requiredUsage != 0 {
 			var usage byte
-			if key.SelfSignature.FlagsValid {
+
+			switch {
+			case key.SelfSignature.FlagsValid:
 				if key.SelfSignature.FlagCertify {
 					usage |= packet.KeyFlagCertify
 				}
@@ -246,17 +248,24 @@ func (el EntityList) KeysByIdUsage(id uint64, requiredUsage byte) (keys []Key) {
 				if key.SelfSignature.FlagEncryptStorage {
 					usage |= packet.KeyFlagEncryptStorage
 				}
-			} else if key.PublicKey.PubKeyAlgo == packet.PubKeyAlgoElGamal {
+
+			case key.PublicKey.PubKeyAlgo == packet.PubKeyAlgoElGamal:
 				// We also need to handle the case where, although the sig's
 				// flags aren't valid, the key can is implicitly usable for
 				// encryption by virtue of being ElGamal. See also the comment
 				// in encryptionKey() above.
 				usage |= packet.KeyFlagEncryptCommunications
 				usage |= packet.KeyFlagEncryptStorage
-			} else if key.PublicKey.PubKeyAlgo == packet.PubKeyAlgoDSA {
+
+			case key.PublicKey.PubKeyAlgo == packet.PubKeyAlgoDSA:
 				usage |= packet.KeyFlagSign
-			} else if key.Entity.PrimaryKey.KeyId == id {
-				usage = (packet.KeyFlagCertify | packet.KeyFlagSign | packet.KeyFlagEncryptCommunications | packet.KeyFlagEncryptStorage)
+
+			// For a primary RSA key without any key flags, be as permissiable
+			// as possible.
+			case key.PublicKey.PubKeyAlgo == packet.PubKeyAlgoRSA &&
+				key.Entity.PrimaryKey.KeyId == id:
+				usage = (packet.KeyFlagCertify | packet.KeyFlagSign |
+					packet.KeyFlagEncryptCommunications | packet.KeyFlagEncryptStorage)
 			}
 
 			if usage&requiredUsage != requiredUsage {
