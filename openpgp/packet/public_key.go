@@ -570,13 +570,18 @@ func (pk *PublicKey) VerifySignature(signed hash.Hash, sig *Signature) (err erro
 	signed.Write(sig.HashSuffix)
 	hashBytes := signed.Sum(nil)
 
-	if hashBytes[0] != sig.HashTag[0] || hashBytes[1] != sig.HashTag[1] {
-		// NOTE(maxtaco) 2016-08-22
-		// Don't do anything in this case. Some GPGs generate bad
-		// 2-byte hash prefixes, but GPG also doesn't seem to care on
-		// import. See BrentMaxwell's key. I think it's safe to disable
-		// this check!
-	}
+	// NOTE(maxtaco) 2016-08-22
+	//
+	// We used to do this:
+	//
+	// if hashBytes[0] != sig.HashTag[0] || hashBytes[1] != sig.HashTag[1] {
+	//	  return errors.SignatureError("hash tag doesn't match")
+	// }
+	//
+	// But don't do anything in this case. Some GPGs generate bad
+	// 2-byte hash prefixes, but GPG also doesn't seem to care on
+	// import. See BrentMaxwell's key. I think it's safe to disable
+	// this check!
 
 	if pk.PubKeyAlgo != sig.PubKeyAlgo {
 		return errors.InvalidArgumentError("public key and signature use different algorithms")
