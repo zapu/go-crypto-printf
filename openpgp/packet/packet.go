@@ -11,6 +11,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/des"
+	"crypto/elliptic"
 	"io"
 	"math/big"
 
@@ -421,7 +422,7 @@ const (
 // key of the given type.
 func (pka PublicKeyAlgorithm) CanEncrypt() bool {
 	switch pka {
-	case PubKeyAlgoRSA, PubKeyAlgoRSAEncryptOnly, PubKeyAlgoElGamal:
+	case PubKeyAlgoRSA, PubKeyAlgoRSAEncryptOnly, PubKeyAlgoElGamal, PubKeyAlgoECDH:
 		return true
 	}
 	return false
@@ -522,6 +523,110 @@ func writeMPI(w io.Writer, bitLength uint16, mpiBytes []byte) (err error) {
 	if err == nil {
 		_, err = w.Write(mpiBytes)
 	}
+	return
+}
+
+func WritePaddedBigInt(w io.Writer, length int, X *big.Int) (n int, err error) {
+	bytes := X.Bytes()
+	n1, err := w.Write(make([]byte, length-len(bytes)))
+	if err != nil {
+		return n1, err
+	}
+	n2, err := w.Write(bytes)
+	if err != nil {
+		return n2, err
+	}
+	return (n1 + n2), err
+}
+
+// Minimum number of bytes to fit the curve coordinates. All
+// coordinates have to be 0-padded to this length.
+func mpiPointByteLength(curve elliptic.Curve) int {
+	return (curve.Params().P.BitLen() + 7) / 8
+}
+
+// writePointMPI serializes X,Y point coordinates to io.Writer w.
+// Curve has to be passed as an argument because the bitlength is
+// determined based on P parameter of the curve.
+func writePointMPI(w io.Writer, curve elliptic.Curve, X, Y *big.Int) (err error) {
+	byteLen := mpiPointByteLength(curve)
+	bitLen := byteLen * 8
+
+	// 2 coords + 3 bits to encode 0x4
+	mpiBitSize := 2*bitLen + 3
+	w.Write([]byte{byte(mpiBitSize >> 8), byte(mpiBitSize), 0x4})
+
+	// write zero-padded coordinates
+	WritePaddedBigInt(w, byteLen, X)
+	WritePaddedBigInt(w, byteLen, Y)
+	return
+}
+
+func readPointMPI(r io.Reader, curve elliptic.Curve) (X, Y *parsedMPI, err error) {
+	Y = new(parsedMPI)
+	X = new(parsedMPI)
+	var buf [2]byte
+	_, err = readFull(r, buf[0:2])
+
+	//coordBitLen := mpiPointByteLength(curve) * 8
+	mpiBitSize := int(buf[0])<<8 | int(buf[1])
+	mpiByteSize := (mpiBitSize + 7) / 8
+	r.Read(buf[:1])
+	header := buf[0]
+	if header == 0x4 {
+		//if mpiBitSize != 2 * coordBitLen + 3 {
+		//	err = errors.StructuralError("Invalid MPI packet size.")
+		//	return
+		//}
+
+		coordLen := (mpiByteSize - 1) / 2
+
+		X.bytes = make([]byte, coordLen)
+		X.bitLength = uint16(coordLen * 8)
+		_, err = readFull(r, X.bytes)
+		if err != nil {
+			return
+		}
+
+		Y.bytes = make([]byte, coordLen)
+		Y.bitLength = uint16(coordLen * 8)
+		_, err = readFull(r, Y.bytes)
+		if err != nil {
+			return
+		}
+	} else if header == 0x40 {
+		//if mpiBitSize != coordBitLen + 7 {
+		//	err = errors.StructuralError("Invalid MPI packet size.")
+		//	return
+		//}
+
+		coordLen := mpiByteSize - 1
+		X.bytes = make([]byte, coordLen)
+		X.bitLength = uint16(coordLen * 8)
+		_, err = readFull(r, X.bytes)
+		if err != nil {
+			return
+		}
+		Y = nil
+	} else {
+		err = errors.StructuralError("Unknown MPI type.")
+	}
+
+	return
+}
+
+// writePointMPI40 serializes X point coordinate to io.Writer w
+// with the 0x40 encoding. Used by cv25519 ECDH.
+func writePointMPI40(w io.Writer, curve elliptic.Curve, X *big.Int) (err error) {
+	byteLen := mpiPointByteLength(curve)
+	bitLen := byteLen * 8
+
+	// 2 coords + 3 bits to encode 0x4
+	mpiBitSize := bitLen + 7
+	w.Write([]byte{byte(mpiBitSize >> 8), byte(mpiBitSize), 0x40})
+
+	// write zero-padded coordinates
+	WritePaddedBigInt(w, byteLen, X)
 	return
 }
 

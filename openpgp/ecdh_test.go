@@ -1,18 +1,14 @@
 package openpgp
 
 import (
+	"bytes"
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/keybase/go-crypto/openpgp/packet"
+	"io"
+	"io/ioutil"
 	"strings"
 	"testing"
 )
-
-// Here is some test data to actually get ECDH encryption and
-// decryption working. At the time of the work in CORE-3806 (internal
-// bug tracker), we didn't actually need the ECDH key to work,
-// just to deserialize properly, so we didn't go down the path
-// of debugging those code paths. However, we did generate these
-// test vectors.
 
 const privKey = `-----BEGIN PGP PRIVATE KEY BLOCK-----
 
@@ -64,7 +60,7 @@ NfBc9h72rI/hIjOdSM8ClO2ijOShevljVrd8YOxnTeJgVwtwFd3S9IA1
 
 const passphrase = `abcd`
 
-const decryption = `test message`
+const decryption = "test message\n"
 
 func openAndDecryptKey(t *testing.T, key string, passphrase string) EntityList {
 	entities, err := ReadArmoredKeyRing(strings.NewReader(key))
@@ -91,15 +87,121 @@ func openAndDecryptKey(t *testing.T, key string, passphrase string) EntityList {
 	return entities
 }
 
-func TestECDHDecryptionNotImplemented(t *testing.T) {
+func TestECDHDecryption(t *testing.T) {
 	keys := openAndDecryptKey(t, privKey, passphrase)
 	b, err := armor.Decode(strings.NewReader(gpgEncryption))
 	if err != nil {
 		t.Fatal(err)
 	}
 	source := b.Body
-	_, err = ReadMessage(source, keys, nil, nil)
-	if err == nil {
-		t.Fatal("expected a failure, since this feature isn't implemented yet")
+	md, err := ReadMessage(source, keys, nil, nil)
+	if err != nil {
+		t.Fatalf("failed to read msg: %s", err)
+	}
+	contents, err := ioutil.ReadAll(md.UnverifiedBody)
+	if err != nil {
+		t.Errorf("error reading UnverifiedBody: %s", err)
+	}
+	if string(contents) != decryption {
+		t.Errorf("bad UnverifiedBody got:\"%s\" want:\"%s\"", string(contents), decryption)
 	}
 }
+
+func ecdhRoundtrip(t *testing.T, privKey string) {
+	entities, err := ReadArmoredKeyRing(strings.NewReader(privKey))
+	if err != nil {
+		t.Fatalf("error opening keys: %v", err)
+	}
+	if len(entities) != 1 {
+		t.Fatal("expected only 1 key")
+	}
+	if !entities[0].Subkeys[0].PublicKey.PubKeyAlgo.CanEncrypt() {
+		t.Fatal("key cannot encrypt")
+	}
+	buf := new(bytes.Buffer)
+	armored, err := armor.Encode(buf, "PGP MESSAGE", nil)
+	writer, err := Encrypt(armored, entities[:1], nil, nil, nil)
+	if err != nil {
+		t.Fatalf("Failed to Encrypt: %s", err)
+	}
+	msgstr := "Hello Elliptic Curve Cryptography World."
+	io.Copy(writer, bytes.NewBufferString(msgstr))
+	writer.Close()
+	armored.Close()
+
+	block, err := armor.Decode(bytes.NewBuffer(buf.Bytes()))
+	md, err := ReadMessage(block.Body, entities, nil, nil)
+	if err != nil {
+		t.Fatalf("Failed to decrypt: %s", err)
+	}
+
+	contents, err := ioutil.ReadAll(md.UnverifiedBody)
+	if string(contents) != msgstr {
+		t.Errorf("bad UnverifiedBody got:\"%s\" want:\"%s\"", string(contents), msgstr)
+	}
+
+	return
+}
+
+func TestECDHRoundTrip(t *testing.T) {
+	ecdhRoundtrip(t, privKey384)
+	ecdhRoundtrip(t, privKey521)
+	//ecdhRoundtrip(t, privKeyCv25519)
+}
+
+const privKey521 = `-----BEGIN PGP PRIVATE KEY BLOCK-----
+
+lNkEWAJ/HhMFK4EEACMEIwQBX1achVr3ad6/1AYQM0Xpb0yOch0Va2+d1WjAi/TU
+lVMYFq3Sv1HRgwz87iaEGv2lViKTZ2Zbqh68ndyBoAY9CpQAzHrEnFozvQBQxSHe
+JaWxdiJIF3ZtLRrxMm+SBSKcQge2TwXmFr/coEKU3uS6PNHz9/1qKvOflbLwgiP6
+PWt01HYAAgUeo/x+60pfXvYBT/YwzYtEpMgY3ahEM64gNzCSwbggGdCK02H53Rir
+hQc4NHL/N/dYachvcGllNP2yi5ygNeSjYiDxtCRuaXN0IGtleSB0ZXN0ZXIgPG0r
+dGVzdGluZ0B6YXB1Lm5ldD6IvQQTEwoAIQUCWAJ/HgIbAwULCQgHAgYVCAkKCwIE
+FgIDAQIeAQIXgAAKCRDwOj0LJyvhfR5OAgkBhXIMxYkE8EuBDPjtHG7DliwBt+Ht
+++KWGHxWqkAFWQitjGK33JANOyuMjMr8ealisUsbRO4io51vsOa6BVrvQVsCCQEn
+VHpmetF7urR2j+V/Qr3SmT01sj0opToya52YoM1eS7+bSJRtPYyz4GomHSbMe76m
+zxqcXBu7xS1moh/HQP4gW5zeBFgCfx4SBSuBBAAjBCMEAP1NEe5jGggGOhGr99OX
+zwvBPLbcsyIf7cpqDi1IAHCxcnoYzVIoBJEjkdyHpuTQAvjddSF+SNGk48O4z+Ev
+tmlAAI1ChPg4ZLEk1fLqq/mxsyc3HT5Ny6cKYMeW3cfCAVLlmcLYPMt5ELCOBWj+
+Iy6fp22eVsMaL2S2teDJ+ZsN2abeAwEKCQACCQFm8eXql6OnFxTUQ1ODtW0ub4MM
+BNz1lcGW5PV06vXOwxKEcS1H3HK/ALqD3c7F+mQOAiWnmCXpNRgqKEfd1Rsz1SHH
+iKMEGBMKAAkFAlgCfx4CGwwACgkQ8Do9Cycr4X3dmAIHUn62iaxtsJ3/FlSZhXxy
+d8fW4Z3NhFlCLVL6p4NijQUJQPZMcDyh9fPvSdLE1CvBMtzow2qvEVUWiunus7nl
+mPwCBioXoB7rOhvEz59qnTLAjPLMOw9ib+IEjthSzrGJpfQVn1n/izJbfeG7Ghg+
+FAvmbYconl4Q0uWVJFs6Ys23JuUn
+=IypP
+-----END PGP PRIVATE KEY BLOCK-----`
+
+const privKey384 = `-----BEGIN PGP PRIVATE KEY BLOCK-----
+
+lKQEWAU34RMFK4EEACIDAwT2oNRSt6wQ2XR+yLsL5uLtmI+PGgaCpx84z1YSVRJg
+0/v1/7OnDpEmGv68GXajeZ5K4pDq31HNBrDEe5NwvLXCANOnSn4YQrYpCYVzJCgi
+yK67knfVPRTHuqfbrFrvi80AAYCjD4ZyVQ6aoSsWpD1KQYD9UFRrcpgwj8L3Rnmc
+1bt2KeRBRYLLWCLhzvWpKGrh/k4YS7QgTmlzdCAzODQgVGVzdGVyIDxtKzM4NEB6
+YXB1Lm5ldD6ImQQTEwkAIQUCWAU34QIbAwULCQgHAgYVCAkKCwIEFgIDAQIeAQIX
+gAAKCRC8jTWktJdxUg5CAX909W2xrO7CZa/M85D2yDY3r8vnjUaPN+aZbcYvYXeY
+QxsPdyvHQP+50OBz4KYW5coBgMA1TM7/nwL+y8vibwTuWlDtwQF2YY8MsBSeAl0Z
+6sZzAnwVTtHBJFZuCnHx1RxjF5yoBFgFN+ESBSuBBAAiAwMEwPrC34Behc3CLLfm
+z8nLWPM2RCNb+n+TweDf2vFYwSo96PQvecbB/KI7uthPtxVoecyLhRPR53FVp9Oc
+Ihfssx2uqVNsJD+0rG9RP7dFwhYjh2a45k0o0qpxXGXOPdusAwEJCQABgMA6AgN4
+XTfgtBJRRQ4GkTY1vFivGvwzq2qkansqEI6DLqqiOSqgtkhmgmnYFYOD5BRwiIEE
+GBMJAAkFAlgFN+ECGwwACgkQvI01pLSXcVJjyAF/TsbOlZHUQ/swWUUXHK+/ZGEv
+Sy+NVV6aThtefPRKdzFoOtVqm2zb0JiGoNTF0BbsAYCN3Z6tWZebr9Zv6I1H1w8U
+tWNM382gD7IUjkEz7BIWMbHkn4m8KsAxsax7VhmiTuo=
+=tJxL
+-----END PGP PRIVATE KEY BLOCK-----`
+
+const privKeyCv25519 = `-----BEGIN PGP PRIVATE KEY BLOCK-----
+
+lFgEV/bL8xYJKwYBBAHaRw8BAQdA/tN2DTMq9IDsDjE+d0jdrQv4nUh15IwhEuK6
+98RzHTAAAQC6gzVTi8V5Eis0pBg8g0iW0hp++dPczDXGg+Kc1jkzEw+ItB1NaWNo
+YWwgWiAoMjU1MTkpIDxtQHphcHUubmV0Poh5BBMWCAAhBQJX9svzAhsDBQsJCAcC
+BhUICQoLAgQWAgMBAh4BAheAAAoJEOctHO20d21/oE8A/jeDMoqnVrart8PlBBOh
+U7POysui1CFQb4bYokaURPNzAQCE7gJ0oD2pOlU6zgia1+6JPfAnUL8rQ4PFsZ7b
+5gT2BpxdBFf2y/MSCisGAQQBl1UBBQEBB0DR3in/BpS2e2jyZL1lX+DrUzJwXeQs
+6CTF+o83Jt32UgMBCAcAAP9tMK39aEcGzSUmICdAqybiurbh1anP453af1dwgiRb
+8BF8iGEEGBYIAAkFAlf2y/MCGwwACgkQ5y0c7bR3bX9JPgEA7WiFuFuTI4L0e8mV
+3UeahfoOyLOY71uHDNdfB66DCa0BANK4aMk+j7bpJoWFNpkWq9JnhpfXV9L2dh3R
+kKuKwZkI
+=RN+z
+-----END PGP PRIVATE KEY BLOCK-----`

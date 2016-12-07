@@ -23,6 +23,7 @@ import (
 
 	"github.com/agl/ed25519"
 	"github.com/keybase/go-crypto/brainpool"
+	"github.com/keybase/go-crypto/openpgp/ecdh"
 	"github.com/keybase/go-crypto/openpgp/elgamal"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/rsa"
@@ -128,6 +129,30 @@ func (f *ecdsaKey) newECDSA() (*ecdsa.PublicKey, error) {
 		return nil, errors.UnsupportedError("failed to parse EC point")
 	}
 	return &ecdsa.PublicKey{Curve: c, X: x, Y: y}, nil
+}
+
+func (f *ecdsaKey) newECDH() (*ecdh.PublicKey, error) {
+	var c elliptic.Curve
+	if bytes.Equal(f.oid, oidCurveP256) {
+		c = elliptic.P256()
+	} else if bytes.Equal(f.oid, oidCurveP384) {
+		c = elliptic.P384()
+	} else if bytes.Equal(f.oid, oidCurveP521) {
+		c = elliptic.P521()
+	} else if bytes.Equal(f.oid, oidCurveP256r1) {
+		c = brainpool.P256r1()
+	} else if bytes.Equal(f.oid, oidCurveP384r1) {
+		c = brainpool.P384r1()
+	} else if bytes.Equal(f.oid, oidCurveP512r1) {
+		c = brainpool.P512r1()
+	} else {
+		return nil, errors.UnsupportedError(fmt.Sprintf("unsupported oid: %x", f.oid))
+	}
+	x, y := elliptic.Unmarshal(c, f.p.bytes)
+	if x == nil {
+		return nil, errors.UnsupportedError("failed to parse EC point")
+	}
+	return &ecdh.PublicKey{Curve: c, X: x, Y: y}, nil
 }
 
 func (f *ecdsaKey) byteLen() int {
@@ -344,8 +369,7 @@ func (pk *PublicKey) parse(r io.Reader) (err error) {
 		if err = pk.ecdh.parse(r); err != nil {
 			return
 		}
-		// The ECDH key is stored in an ecdsa.PublicKey for convenience.
-		pk.PublicKey, err = pk.ec.newECDSA()
+		pk.PublicKey, err = pk.ec.newECDH()
 	default:
 		err = errors.UnsupportedError("public key type: " + strconv.Itoa(int(pk.PubKeyAlgo)))
 	}

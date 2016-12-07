@@ -16,10 +16,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/keybase/go-crypto/openpgp/ecdh"
 	"github.com/keybase/go-crypto/openpgp/elgamal"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/s2k"
 	"github.com/keybase/go-crypto/rsa"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 // PrivateKey represents a possibly encrypted private key. See RFC 4880,
@@ -167,7 +170,7 @@ func (pk *PrivateKey) Serialize(w io.Writer) (err error) {
 			err = serializeElGamalPrivateKey(privateKeyBuf, priv)
 		case *ecdsa.PrivateKey:
 			err = serializeECDSAPrivateKey(privateKeyBuf, priv)
-		case *ecdhPrivateKey:
+		case *ecdh.PrivateKey:
 			err = serializeECDHPrivateKey(privateKeyBuf, priv)
 		default:
 			err = errors.InvalidArgumentError("unknown private key type")
@@ -235,8 +238,8 @@ func serializeECDSAPrivateKey(w io.Writer, priv *ecdsa.PrivateKey) error {
 	return writeBig(w, priv.D)
 }
 
-func serializeECDHPrivateKey(w io.Writer, priv *ecdhPrivateKey) error {
-	return writeBig(w, priv.x)
+func serializeECDHPrivateKey(w io.Writer, priv *ecdh.PrivateKey) error {
+	return writeBig(w, priv.X)
 }
 
 // Decrypt decrypts an encrypted private key using a passphrase.
@@ -298,6 +301,8 @@ func (pk *PrivateKey) parsePrivateKey(data []byte) (err error) {
 		return pk.parseECDSAPrivateKey(data)
 	case PubKeyAlgoECDH:
 		return pk.parseECDHPrivateKey(data)
+	case PubKeyAlgoEdDSA:
+		return pk.parseEdDSAPrivateKey(data)
 	}
 	panic("impossible")
 }
@@ -375,8 +380,8 @@ func (pk *PrivateKey) parseElGamalPrivateKey(data []byte) (err error) {
 }
 
 func (pk *PrivateKey) parseECDHPrivateKey(data []byte) (err error) {
-	pub := pk.PublicKey.PublicKey.(*ecdsa.PublicKey)
-	priv := new(ecdhPrivateKey)
+	pub := pk.PublicKey.PublicKey.(*ecdh.PublicKey)
+	priv := new(ecdh.PrivateKey)
 	priv.PublicKey = *pub
 
 	buf := bytes.NewBuffer(data)
@@ -385,7 +390,7 @@ func (pk *PrivateKey) parseECDHPrivateKey(data []byte) (err error) {
 		return
 	}
 
-	priv.x = new(big.Int).SetBytes(d)
+	priv.X = new(big.Int).SetBytes(d)
 	pk.PrivateKey = priv
 	pk.Encrypted = false
 	pk.encryptedData = nil
@@ -405,6 +410,22 @@ func (pk *PrivateKey) parseECDSAPrivateKey(data []byte) (err error) {
 
 	ecdsaPriv.D = new(big.Int).SetBytes(d)
 	pk.PrivateKey = ecdsaPriv
+	pk.Encrypted = false
+	pk.encryptedData = nil
+
+	return nil
+}
+
+func (pk *PrivateKey) parseEdDSAPrivateKey(data []byte) (err error) {
+	spew.Dump(pk.PublicKey.PublicKey)
+
+	buf := bytes.NewBuffer(data)
+	d, _, err := readMPI(buf)
+	if err != nil {
+		return
+	}
+	spew.Dump(d)
+	//pk.PrivateKey = ecdsaPriv
 	pk.Encrypted = false
 	pk.encryptedData = nil
 
