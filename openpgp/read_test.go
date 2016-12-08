@@ -570,6 +570,10 @@ func TestSignatureWithSubpacket33(t *testing.T) {
 	testSignedV4Message(t, subpaacket33Sig, subpacket33Key)
 }
 
+func TestBadSignature(t *testing.T) {
+	testSignedV4MessageWithError(t, badSig, keyForBagSig, true)
+}
+
 func testSignedV3Message(t *testing.T, armoredMsg string, armoredKey string) {
 	sig, err := armor.Decode(strings.NewReader(armoredMsg))
 	if err != nil {
@@ -612,6 +616,10 @@ func testSignedV3Message(t *testing.T, armoredMsg string, armoredKey string) {
 }
 
 func testSignedV4Message(t *testing.T, armoredMsg string, armoredKey string) {
+	testSignedV4MessageWithError(t, armoredMsg, armoredKey, false)
+}
+
+func testSignedV4MessageWithError(t *testing.T, armoredMsg string, armoredKey string, hasErr bool) {
 	sig, err := armor.Decode(strings.NewReader(armoredMsg))
 	if err != nil {
 		t.Error(err)
@@ -636,8 +644,13 @@ func testSignedV4Message(t *testing.T, armoredMsg string, armoredKey string) {
 
 	// We'll see a sig error here after reading in the UnverifiedBody above,
 	// if there was one to see.
-	if err = md.SignatureError; err != nil {
+	err = md.SignatureError
+	if !hasErr && err != nil {
 		t.Error(err)
+		return
+	}
+	if hasErr && err == nil {
+		t.Error("expected a signature verification error")
 		return
 	}
 
@@ -2355,5 +2368,66 @@ RYl5iEr6kQGHmqYt1K142QORPrjYyvGJl8k8cKDjRxOo65ufTB+iztG312cVTnnJ
 /gCEVjvAARdrDuroooJwxqx5BFpi7Z5qb4osmxJwdib9lrt1r/fV7QwY1LrCn5eF
 YcO0GnR3O1jT9w==
 =YRAG
+-----END PGP MESSAGE-----
+`
+const keyForBagSig = `
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: Keybase OpenPGP v2.0.10
+Comment: https://keybase.io/crypto
+
+xm8EVV9BDxMFK4EEACIDAwRSzcsRfEMpwQ7RvwWHPxXf97lwjf8mqqCeTZXkntaK
+LAYBBi4ZH2dPpVL2Nk6Bh0K7Zc9II0ksc0BL+z0fJ/3hIDhq9NgfusjqjiX8NYZ7
+dbeT+gyDPp5gzXaxPqrF0vXNBW1heDMywpIEExMKABoFAlVfQQ8CGwEDCwkHAxUK
+CAIeAQIXgAIZAQAKCRApXuhUvwxsQUGxAX9Y1nv+tbCxZGE4P22kbVQbi4BTyIkL
+YgNKqeoOlNxuWeDdh0xaDsimsTpEKWtSagMBgK179Xs4gsE9jPBtHGuzYpbHbROS
+hVCq9ssZjvId45D2UHFSjyAm8spEeFJzLARqEs5WBFVfQQ8SCCqGSM49AwEHAgME
+ntY21MrNuVBiA28QJRFx/+nw8O6URDuF7P+a1Ou+c/mzeH8bH9NB+fozm+wt0+kU
+sAQ1rrmAdK9oXfbxFHw+VgMBCgnChwQYEwoADwUCVV9BDwUJDwmcAAIbDAAKCRAp
+XuhUvwxsQYFyAYCuu59mWoB68DUaSFY1YoIjXt10oKkJyqeaF/MDKCs4RZvnLkcM
+Vfm4ANHRx8P4jTwBgKF4bBRJYKbGCh9Sdve3ivaihIjKueXbIkIwzlHKnDhH0ryF
+Zy7AuYErrAMqZiEyG85SBFVfQQ8TCCqGSM49AwEHAgME2hMvKEfCqKxsX7+B70Lq
+fOOQg3mAP5vNEE9fP/O4CHS3nG7DRv4Di1vZlHE7u2OHAfHSAFq3ir935z4C0d7B
+csLAJwQYEwoADwUCVV9BDwUJDwmcAAIbIgBqCRApXuhUvwxsQV8gBBkTCgAGBQJV
+X0EPAAoJEGcrs3re2HczDekBAJOT5B0avXmVYnPGkTwVZ3oeoXNwQEpYOm/kdPEx
+BFVhAQCKGjWboi7vVftw1cU/IFp1uh7lYWEzDlB9yvUCyd7/INoFAYC9wV1R++yE
+roIfq9hkzttJnvmuobSYaJHLMIQXnIADOBLHbHxrKInDtYqIToUoYsoBf2CMDj0r
+Vwx1bGn7KprTMnu89hv/rIjnAcDYorsmqfECoXXZNBrVHS/DBpDROPPpag==
+=wdBi
+-----END PGP PUBLIC KEY BLOCK-----
+`
+
+const badSig = `
+-----BEGIN PGP MESSAGE-----
+Version: Keybase OpenPGP v2.0.10
+Comment: https://keybase.io/crypto
+
+yMQhAnicrVU7jONEAM0dHBIrIR06CShXaRCXZeOxPf5EOgknsZPdxInzcbIJ0S1j
+e5xMsh5/87GPEy2cREWBkKBBSNAjIdEhPhUFHaK6ElEfBS1O9tA1VzLNaGbePL15
+1nv++ZUXCkd35qVvs8d/bLkbv/7CrQvmpXL7QdHynbRYeVBc4cOErxwcJ5cr4hQr
+RQYATnYEFvKYlzCwBQkInOjKAnIZmWcEDHnIsjYvYixLgsQyDHZsi8WOjCTedXhR
+sBwGFU+KLqFzHAURoUlOK2FLhLzNWi4rMCKLGRlK0MWYlSHGEuQtl7EFmwf5xYUf
+72/k4iwU41Pi53v54vIg7zn4/1n3+kAn8jYn2a5oY0vmRRcKHMvw0JFsBB1eAvIe
+GOOIIg/naA/tOLb48KQYE+upqc9UuVBE2OWB6LqAs5BrQwe7ruxYEmsBKOXM2AEy
+y7D5ieQyyIKOCCwRW5bA5Tj2oCrCGxzF+DIm85z27f2oqo2zzrHRMI51dTBQGuph
+d0ZHOZD4tHLcunbwuBtguodt2FPmFDAzWvM9D9OkcrxIkiCulMvPvC7bURok/ozO
+aKprE4USO5qeiQj0q5rubFxVG899zZ+Mm4tJbdzOjPUuqDbKczVQY0MRlpkRdaZr
+0eM2m5zBR71d3G7UYb0xWqnxTrXUga/76nxORkG7kW76rLaO7KE9bDCe19BLTrm8
+dpue22FFWh/P6NghUuxiUxRFRpeTDeezGSpTrXRxsVp4aid3sa+vtpuGMvA9LoW1
+FmnqtaZeVVdaVRCqM4pb3vm05iM00NmmGvcutHq47p1tx17Y0nvDTUvpLzuTUrVV
+WtWSkLQnV03W7wejvrNajbegm7uFhYCAPun3VMs3TdVXJwrSNWenQWF41V6I46Yz
+Ij1+yq55U8mG422Uthy+LBulKc5SMKOmvM1EZKS8srswzUVD7ztVnMY1IA2Y7SIM
+mRAqZlie1FDH9/lNuF3kjx3II00PalAdajM6OCcZM4kVfRrNO82RKnR7+rxPWsiO
+fNJihr1+g27r9Hzlw244CPkaMDt4xDEmkuz6FgW5k5bOoiB25W5KRleqPpB7yxb2
+LH9lLqnWaJyPESGskrZIdEYAqsqMdLGcnmf6vLHt6ECZ0RZJz5farpn2zGWWxPMz
+hQyN1XYbmmQ7aWWjZjDvKaHb18nZWatjEhDVkJh2+2ikdM2J5OWvSNZubzNts/w2
+6lUTq8PLqxrkYraj1cXh1KMOhUa2EUStzYYydUpiHfBJVo+wZCQrWZrR9jBKXSqk
+67KRCAHVciHZRbldHRqTJeY4bLgl2DE2YakbBoFtRrQEE7oEcsk1/FLIcTO6TLFB
+kwzW+5NEWDP3ZvSeCna5QYf0qJ36cxK1T3aSBvukPw34SXFznbJiBeSHdkL2PQB4
+juUYgeHgSRHvAhLhS7JHMNfjpBjkMc5JMEZsXjiCyAhAcHnJFXjIActGDsQOlPN2
+hJwgAgdhGeUfEHMQQibvMQ5AgEVx3wcxDi+vJYHDgvrFCpurRPODyDlFyTrCxYc/
+3n+xcOeo8NKtm/vqLxy9fPu/H8JPb94ofCxnDz599/PLQj6+Pvrqw2/eWP3wW124
++/j9t+7yf43jG4Xvgn/okz/fe/L9l+88un/zM+x9cvX6R68+qvx967XTD34nX/wL
+bL0JeQ==
+=965F
 -----END PGP MESSAGE-----
 `
