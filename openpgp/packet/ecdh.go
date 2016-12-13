@@ -30,7 +30,7 @@ func decryptKeyECDH(priv *PrivateKey, X, Y *big.Int, C []byte) (out []byte, err 
 
 	Sx, err := ecdhpriv.DecryptShared(X, Y)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	kdf_params := ECDHKdfParams(&priv.PublicKey)
@@ -39,10 +39,10 @@ func decryptKeyECDH(priv *PrivateKey, X, Y *big.Int, C []byte) (out []byte, err 
 		return nil, errors.InvalidArgumentError("invalid hash id in private key")
 	}
 
-	key := ecdhpriv.Kdf(Sx, kdf_params, hash)
-	decrypted, err := ecdh.AesKeyUnwrap(key[:32], C)
+	key := ecdhpriv.KDF(Sx, kdf_params, hash)
+	decrypted, err := ecdh.AESKeyUnwrap(key[:32], C)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	// We have to "read ahead" to discover real length of the

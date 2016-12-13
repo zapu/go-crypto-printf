@@ -35,7 +35,7 @@ func RandomScalar(random io.Reader, N *big.Int) (*big.Int, error) {
 	return m, nil
 }
 
-func (e *PublicKey) Kdf(S []byte, kdf_params []byte, hash crypto.Hash) []byte {
+func (e *PublicKey) KDF(S []byte, kdf_params []byte, hash crypto.Hash) []byte {
 	S_len := (e.Curve.Params().P.BitLen() + 7) / 8
 	buf := new(bytes.Buffer)
 	buf.Write([]byte{0, 0, 0, 1})
@@ -55,7 +55,8 @@ func (e *PublicKey) Kdf(S []byte, kdf_params []byte, hash crypto.Hash) []byte {
 	return key
 }
 
-func AesKeyUnwrap(key, cipherText []byte) ([]byte, error) {
+// Implements RFC 3394 Key Unwrapping.
+func AESKeyUnwrap(key, cipherText []byte) ([]byte, error) {
 	if len(cipherText)%8 != 0 {
 		return nil, errors.New("cipherText must by a multiple of 64 bits")
 	}
@@ -106,7 +107,7 @@ func AesKeyUnwrap(key, cipherText []byte) ([]byte, error) {
 }
 
 // Implements RFC 3394 Key Wrapping.
-func AesKeyWrap(key, plainText []byte) ([]byte, error) {
+func AESKeyWrap(key, plainText []byte) ([]byte, error) {
 	if len(plainText)%8 != 0 {
 		return nil, errors.New("plainText must be a multiple of 64 bits")
 	}
@@ -189,7 +190,7 @@ func (e *PublicKey) Encrypt(random io.Reader, kdf_params []byte, plain []byte, h
 
 	v, err := RandomScalar(random, curve_params.N)
 	if err != nil {
-		return
+		return nil, nil, nil, err
 	}
 
 	// Vx, Vy - encryption key
@@ -205,14 +206,13 @@ func (e *PublicKey) Encrypt(random io.Reader, kdf_params []byte, plain []byte, h
 	// encryption key for symmetric encryption later.
 
 	plain = PadBuffer(plain, 8)
-	key := e.Kdf(Sx.Bytes(), kdf_params, hash)
+	key := e.KDF(Sx.Bytes(), kdf_params, hash)
 
 	// Take only as many bytes from key as the key length (the hash
 	// result might be bigger)
-	encrypted, err := AesKeyWrap(key[:32], plain)
+	encrypted, err := AESKeyWrap(key[:32], plain)
 
-	C = encrypted
-	return
+	return Vx, Vy, encrypted, nil
 }
 
 func (e *PrivateKey) DecryptShared(X, Y *big.Int) ([]byte, error) {
