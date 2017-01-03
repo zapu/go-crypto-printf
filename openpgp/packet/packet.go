@@ -557,16 +557,22 @@ func writePointMPI(w io.Writer, curve elliptic.Curve, X, Y *big.Int) (err error)
 	w.Write([]byte{byte(mpiBitSize >> 8), byte(mpiBitSize), 0x4})
 
 	// write zero-padded coordinates
-	WritePaddedBigInt(w, byteLen, X)
-	WritePaddedBigInt(w, byteLen, Y)
+	_, err = WritePaddedBigInt(w, byteLen, X)
+	if err != nil {
+		return
+	}
+	_, err = WritePaddedBigInt(w, byteLen, Y)
 	return
 }
 
 func readPointMPI(r io.Reader, curve elliptic.Curve) (X, Y *parsedMPI, err error) {
-	Y = new(parsedMPI)
-	X = new(parsedMPI)
+	X = nil
+	Y = nil
 	var buf [2]byte
 	_, err = readFull(r, buf[0:2])
+	if err != nil {
+		return
+	}
 
 	//coordBitLen := mpiPointByteLength(curve) * 8
 	mpiBitSize := int(buf[0])<<8 | int(buf[1])
@@ -581,6 +587,7 @@ func readPointMPI(r io.Reader, curve elliptic.Curve) (X, Y *parsedMPI, err error
 
 		coordLen := (mpiByteSize - 1) / 2
 
+		X = new(parsedMPI)
 		X.bytes = make([]byte, coordLen)
 		X.bitLength = uint16(coordLen * 8)
 		_, err = readFull(r, X.bytes)
@@ -588,6 +595,7 @@ func readPointMPI(r io.Reader, curve elliptic.Curve) (X, Y *parsedMPI, err error
 			return
 		}
 
+		Y = new(parsedMPI)
 		Y.bytes = make([]byte, coordLen)
 		Y.bitLength = uint16(coordLen * 8)
 		_, err = readFull(r, Y.bytes)
@@ -601,13 +609,13 @@ func readPointMPI(r io.Reader, curve elliptic.Curve) (X, Y *parsedMPI, err error
 		//}
 
 		coordLen := mpiByteSize - 1
+		X = new(parsedMPI)
 		X.bytes = make([]byte, coordLen)
 		X.bitLength = uint16(coordLen * 8)
 		_, err = readFull(r, X.bytes)
 		if err != nil {
 			return
 		}
-		Y = nil
 	} else {
 		err = errors.StructuralError("Unknown MPI type.")
 	}
@@ -617,17 +625,20 @@ func readPointMPI(r io.Reader, curve elliptic.Curve) (X, Y *parsedMPI, err error
 
 // writePointMPI40 serializes X point coordinate to io.Writer w
 // with the 0x40 encoding. Used by cv25519 ECDH.
-func writePointMPI40(w io.Writer, curve elliptic.Curve, X *big.Int) (err error) {
+func writePointMPI40(w io.Writer, curve elliptic.Curve, X *big.Int) error {
 	byteLen := mpiPointByteLength(curve)
 	bitLen := byteLen * 8
 
 	// 2 coords + 3 bits to encode 0x4
 	mpiBitSize := bitLen + 7
-	w.Write([]byte{byte(mpiBitSize >> 8), byte(mpiBitSize), 0x40})
+	_, err := w.Write([]byte{byte(mpiBitSize >> 8), byte(mpiBitSize), 0x40})
+	if err != nil {
+		return err
+	}
 
 	// write zero-padded coordinates
-	WritePaddedBigInt(w, byteLen, X)
-	return
+	_, err = WritePaddedBigInt(w, byteLen, X)
+	return err
 }
 
 // writeBig serializes a *big.Int to w.
