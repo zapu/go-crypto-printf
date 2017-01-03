@@ -201,9 +201,9 @@ func (e *PublicKey) Encrypt(random io.Reader, kdf_params []byte, plain []byte, h
 
 	// Encrypt the payload with KDF-ed S as the encryption key. Pass
 	// the ciphertext along with V to the recipient. Recipient can
-	// generate S using V and their priv key, and then KDF encryption
-	// key on their own and decrypt the ciphertext, revealing
-	// encryption key for symmetric encryption later.
+	// generate S using V and their priv key, and then KDF(S), on
+	// their own, to get encryption key and decrypt the ciphertext,
+	// revealing encryption key for symmetric encryption later.
 
 	plain = PadBuffer(plain, 8)
 	key := e.KDF(Sx.Bytes(), kdf_params, hash)
@@ -224,17 +224,17 @@ func (e *PrivateKey) DecryptShared(X, Y *big.Int) ([]byte, error) {
 func nonZeroRandomBytes(s []byte, rand io.Reader) (err error) {
 	_, err = io.ReadFull(rand, s)
 	if err != nil {
-		return
+		return err
 	}
 
 	for i := 0; i < len(s); i++ {
 		for s[i] == 0 {
 			_, err = io.ReadFull(rand, s[i:i+1])
 			if err != nil {
-				return
+				return err
 			}
 		}
 	}
 
-	return
+	return nil
 }
