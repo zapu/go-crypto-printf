@@ -139,14 +139,21 @@ func ecdhRoundtrip(t *testing.T, privKey string) {
 	if string(contents) != msgstr {
 		t.Errorf("bad UnverifiedBody got:\"%s\" want:\"%s\"", string(contents), msgstr)
 	}
-
-	return
 }
 
 func TestECDHRoundTrip(t *testing.T) {
 	ecdhRoundtrip(t, privKey384)
 	ecdhRoundtrip(t, privKey521)
 	//ecdhRoundtrip(t, privKeyCv25519)
+}
+
+func TestInvalidPadding(t *testing.T) {
+	entities, err := ReadArmoredKeyRing(strings.NewReader(privKey384))
+	block, err := armor.Decode(strings.NewReader(payloadInvalidPadding))
+	_, err = ReadMessage(block.Body, entities, nil, nil)
+	if err == nil {
+		t.Fatalf("Should fail with error.")
+	}
 }
 
 const privKey521 = `-----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -205,3 +212,19 @@ U7POysui1CFQb4bYokaURPNzAQCE7gJ0oD2pOlU6zgia1+6JPfAnUL8rQ4PFsZ7b
 kKuKwZkI
 =RN+z
 -----END PGP PRIVATE KEY BLOCK-----`
+
+// Payload encrypted for privKey384 with invalid padding - only last
+// byte of padding is of correct value, rest is 0.
+
+// TODO: It looks like gpg2 only verifies that last byte. So this
+// payload will actually go through gpg2 without problems.
+const payloadInvalidPadding = `-----BEGIN PGP MESSAGE-----
+
+wY4D4iMKJN6I/VgSAwME6YQzhZdxHePAro1u7Xj7m+gjcnh2DUV1mliU5WbixLNB
+DJYXK2a654hwGsd7UKOPkjKTzMkCYSq3W8T1fGedBF/AH95v59ixx1btzg5istEt
+UtpBDikx6VHbHuYnPb/gIJ5pg2CDg7w88mXmrUtsIQGer+k6NvVHuLirpcx/Nd/G
+0uAB5OU8ItIF2PZeki5gVZsDcaThyrHg3eDL4bzt4NPilu8k/uD25eRpHMNilOsY
+AskqQEsGWIT0x6WvAMEtaHCK4j+PZhka4LHiymo5UeBf4A7g4OTWGz7P8OM4dPR7
+av0MqAvw4gT0mPzhw+8A
+=rmux
+-----END PGP MESSAGE-----`
