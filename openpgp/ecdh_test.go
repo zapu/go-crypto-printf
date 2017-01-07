@@ -147,7 +147,7 @@ func TestECDHRoundTrip(t *testing.T) {
 	//ecdhRoundtrip(t, privKeyCv25519)
 }
 
-func TestInvalidPadding(t *testing.T) {
+func TestInvalid(t *testing.T) {
 	test_decrypt := func(priv_key, payload string) {
 		entities, err := ReadArmoredKeyRing(strings.NewReader(priv_key))
 		block, err := armor.Decode(strings.NewReader(payload))
@@ -159,6 +159,7 @@ func TestInvalidPadding(t *testing.T) {
 
 	test_decrypt(privKey384, payloadInvalidPadding)
 	test_decrypt(privKey384, payloadInvalidPadding2)
+	test_decrypt(privKey384, payloadInvalidKDFParams)
 }
 
 const privKey521 = `-----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -219,7 +220,8 @@ kKuKwZkI
 -----END PGP PRIVATE KEY BLOCK-----`
 
 // Payload encrypted for privKey384 with invalid padding - only last
-// byte of padding is of correct value, rest is 0.
+// byte of padding is of correct value, rest is 0. Otherwise the key
+// is correct, just the padding is invalid and indicates tampering.
 
 // TODO: It looks like gpg2 only verifies that last byte. So this
 // payload will actually go through gpg2 without problems.
@@ -248,4 +250,19 @@ AVFkBdGmU8Zbjn2HSFm6IEP9ZT3zPzkdyKHfBTS4w5xWVTxtRGBAtl/ZIBmogUie
 C6xEvJlx+45z5xz2KSeDxOYt1mDqeWnw4CfieHiSUODJ4FTgVeTHYEqmaC2FhiIu
 rIfsm3rl4rGKDxbhv14A
 =jxQh
+-----END PGP MESSAGE-----`
+
+// Invalid KDF params will result in invalid key for AES unwrapping.
+// Encrypted message for with 384 pub key. gpg2 fails with:
+// gpg: public key decryption failed: Checksum error
+// gpg: decryption failed: No secret key
+const payloadInvalidKDFParams = `-----BEGIN PGP MESSAGE-----
+
+wY4D4iMKJN6I/VgSAwME+T6U0UCx5h03E/TwuwdxdJADIyhmkyXBrUyu8iVXp5Ny
+ue9wfjFH72iqvHq/QeOOYI73xU4TESpFRUOjPD3aPXFwxYAaPRu4qMDpvnK18tSc
+HIBPjrhz1ZBe5Ek541+3IH+80o+hpOSUKdVR0DbxQ1qpY79S7VXcDCtJXfjvp1WT
+0uAB5LQ14PWJ0EYhgeZxmGJt0uXhq07gOuBc4XNZ4HjiI4195eA95Wn7vkkqm5Fq
+9YlMKfRkjXO/S1INtnEcyX3xfeHGdsMj4DvifXny2eDX4NXgW+TU+b3hvaY9u6QS
+7eE4lCHI4inRXO7hh6EA
+=0LQy
 -----END PGP MESSAGE-----`
