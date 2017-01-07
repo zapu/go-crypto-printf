@@ -148,12 +148,17 @@ func TestECDHRoundTrip(t *testing.T) {
 }
 
 func TestInvalidPadding(t *testing.T) {
-	entities, err := ReadArmoredKeyRing(strings.NewReader(privKey384))
-	block, err := armor.Decode(strings.NewReader(payloadInvalidPadding))
-	_, err = ReadMessage(block.Body, entities, nil, nil)
-	if err == nil {
-		t.Fatalf("Should fail with error.")
+	test_decrypt := func(priv_key, payload string) {
+		entities, err := ReadArmoredKeyRing(strings.NewReader(priv_key))
+		block, err := armor.Decode(strings.NewReader(payload))
+		_, err = ReadMessage(block.Body, entities, nil, nil)
+		if err == nil {
+			t.Fatalf("Should fail with error.")
+		}
 	}
+
+	test_decrypt(privKey384, payloadInvalidPadding)
+	test_decrypt(privKey384, payloadInvalidPadding2)
 }
 
 const privKey521 = `-----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -227,4 +232,20 @@ UtpBDikx6VHbHuYnPb/gIJ5pg2CDg7w88mXmrUtsIQGer+k6NvVHuLirpcx/Nd/G
 AskqQEsGWIT0x6WvAMEtaHCK4j+PZhka4LHiymo5UeBf4A7g4OTWGz7P8OM4dPR7
 av0MqAvw4gT0mPzhw+8A
 =rmux
+-----END PGP MESSAGE-----`
+
+// Invalid padding again, this time all padding bytes are garbage
+// gpg2 complains with:
+// gpg: public key decryption failed: Wrong secret key used
+// gpg: decryption failed: No secret key
+// when given this payload.
+const payloadInvalidPadding2 = `-----BEGIN PGP MESSAGE-----
+
+wY4D4iMKJN6I/VgSAwMEJCTy2PmsaOf5/IrR/x9+rQSdGcV4lX1G32abha8mI/Iy
+HEbylH4I5xMPMcLEE/IEf0OG8cmoa6Cku/O9gpM2cDPKFgzvntQGzTV0pacaCM7Z
+AVFkBdGmU8Zbjn2HSFm6IEP9ZT3zPzkdyKHfBTS4w5xWVTxtRGBAtl/ZIBmogUie
+0uAB5MTm3+pjTFMnZOXnZVPCf9Thx6Lga+Ct4Q2w4PniSKGmPuCA5dXokZcRsw0v
+C6xEvJlx+45z5xz2KSeDxOYt1mDqeWnw4CfieHiSUODJ4FTgVeTHYEqmaC2FhiIu
+rIfsm3rl4rGKDxbhv14A
+=jxQh
 -----END PGP MESSAGE-----`
