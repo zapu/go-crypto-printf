@@ -215,9 +215,9 @@ func (e *PublicKey) Encrypt(random io.Reader, kdf_params []byte, plain []byte, h
 	return Vx, Vy, encrypted, nil
 }
 
-func (e *PrivateKey) DecryptShared(X, Y *big.Int) ([]byte, error) {
+func (e *PrivateKey) DecryptShared(X, Y *big.Int) []byte {
 	Sx, _ := e.Curve.ScalarMult(X, Y, e.X.Bytes())
-	return Sx.Bytes(), nil
+	return Sx.Bytes()
 }
 
 // nonZeroRandomBytes fills the given slice with non-zero random octets.

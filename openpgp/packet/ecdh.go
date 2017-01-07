@@ -28,10 +28,7 @@ func decryptKeyECDH(priv *PrivateKey, X, Y *big.Int, C []byte) (out []byte, err 
 		return nil, errors.InvalidArgumentError("bad internal ECDH key")
 	}
 
-	Sx, err := ecdhpriv.DecryptShared(X, Y)
-	if err != nil {
-		return nil, err
-	}
+	Sx := ecdhpriv.DecryptShared(X, Y)
 
 	kdf_params := ECDHKdfParams(&priv.PublicKey)
 	hash, ok := s2k.HashIdToHash(byte(priv.ecdh.KdfHash))
