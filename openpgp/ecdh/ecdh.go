@@ -21,20 +21,6 @@ type PrivateKey struct {
 	X *big.Int
 }
 
-func RandomScalar(random io.Reader, N *big.Int) (*big.Int, error) {
-	randLen := new(big.Int).Sub(N, big.NewInt(2)).BitLen()
-	randBuf := make([]byte, (randLen+7)/8)
-	err := nonZeroRandomBytes(randBuf, random)
-	if err != nil {
-		return nil, err
-	}
-
-	m := new(big.Int).SetBytes(randBuf)
-	m = new(big.Int).Add(m, big.NewInt(1))
-
-	return m, nil
-}
-
 func (e *PublicKey) KDF(S []byte, kdf_params []byte, hash crypto.Hash) []byte {
 	S_len := (e.Curve.Params().P.BitLen() + 7) / 8
 	buf := new(bytes.Buffer)
@@ -186,19 +172,18 @@ func UnpadBuffer(buf []byte, data_len int) []byte {
 }
 
 func (e *PublicKey) Encrypt(random io.Reader, kdf_params []byte, plain []byte, hash crypto.Hash, kdf_key_size int) (Vx *big.Int, Vy *big.Int, C []byte, err error) {
-	curve_params := e.Curve.Params()
+	// Vx, Vy - encryption key
 
-	// TODO(zapu): Replace with elliptic.GenerateKey
-	v, err := RandomScalar(random, curve_params.N)
+	// Note for Curve 25519 - curve25519 library already does key
+	// clamping in scalarMult, so we can use generic random scalar
+	// generation from elliptic.
+	priv, Vx, Vy, err := elliptic.GenerateKey(e.Curve, random)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	// Vx, Vy - encryption key
-	Vx, Vy = e.Curve.ScalarBaseMult(v.Bytes())
-
 	// Sx, Sy - shared secret
-	Sx, _ := e.Curve.ScalarMult(e.X, e.Y, v.Bytes())
+	Sx, _ := e.Curve.ScalarMult(e.X, e.Y, priv)
 
 	// Encrypt the payload with KDF-ed S as the encryption key. Pass
 	// the ciphertext along with V to the recipient. Recipient can
