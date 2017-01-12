@@ -23,7 +23,7 @@ type PrivateKey struct {
 
 func RandomScalar(random io.Reader, N *big.Int) (*big.Int, error) {
 	randLen := new(big.Int).Sub(N, big.NewInt(2)).BitLen()
-	randBuf := make([]byte, randLen/8)
+	randBuf := make([]byte, (randLen+7)/8)
 	err := nonZeroRandomBytes(randBuf, random)
 	if err != nil {
 		return nil, err
