@@ -54,7 +54,10 @@ func (e *EncryptedKey) parse(r io.Reader) (err error) {
 		if err != nil {
 			return err
 		}
-		e.encryptedMPI1, e.encryptedMPI2 = *x, *y
+		e.encryptedMPI1 = *x
+		if y != nil {
+			e.encryptedMPI2 = *y
+		}
 		_, err = readFull(r, buf[:1]) // read C len (1 byte)
 		if err != nil {
 			return err

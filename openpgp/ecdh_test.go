@@ -144,7 +144,10 @@ func ecdhRoundtrip(t *testing.T, privKey string) {
 func TestECDHRoundTrip(t *testing.T) {
 	ecdhRoundtrip(t, privKey384)
 	ecdhRoundtrip(t, privKey521)
-	//ecdhRoundtrip(t, privKeyCv25519)
+}
+
+func TestECDHRoundTripCv25519(t *testing.T) {
+	ecdhRoundtrip(t, privKeyCv25519)
 }
 
 func TestInvalid(t *testing.T) {

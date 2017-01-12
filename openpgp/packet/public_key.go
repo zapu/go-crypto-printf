@@ -23,6 +23,7 @@ import (
 
 	"github.com/agl/ed25519"
 	"github.com/keybase/go-crypto/brainpool"
+	"github.com/keybase/go-crypto/curve25519"
 	"github.com/keybase/go-crypto/openpgp/ecdh"
 	"github.com/keybase/go-crypto/openpgp/elgamal"
 	"github.com/keybase/go-crypto/openpgp/errors"
@@ -44,6 +45,8 @@ var (
 	oidCurveP512r1 []byte = []byte{0x2B, 0x24, 0x03, 0x03, 0x02, 0x08, 0x01, 0x01, 0x0D}
 	// EdDSA
 	oidEdDSA []byte = []byte{0x2B, 0x06, 0x01, 0x04, 0x01, 0xDA, 0x47, 0x0F, 0x01}
+	// cv25519
+	oidCurve25519 []byte = []byte{0x2B, 0x06, 0x01, 0x04, 0x01, 0x97, 0x55, 0x01, 0x05, 0x01}
 )
 
 const maxOIDLength = 10
@@ -145,10 +148,13 @@ func (f *ecdsaKey) newECDH() (*ecdh.PublicKey, error) {
 		c = brainpool.P384r1()
 	} else if bytes.Equal(f.oid, oidCurveP512r1) {
 		c = brainpool.P512r1()
+	} else if bytes.Equal(f.oid, oidCurve25519) {
+		c = curve25519.Cv25519()
 	} else {
 		return nil, errors.UnsupportedError(fmt.Sprintf("unsupported oid: %x", f.oid))
 	}
-	x, y := elliptic.Unmarshal(c, f.p.bytes)
+	// curve25519.Unmarshal handles unmarshaling for all curve types.
+	x, y := curve25519.Unmarshal(c, f.p.bytes)
 	if x == nil {
 		return nil, errors.UnsupportedError("failed to parse EC point")
 	}
@@ -349,7 +355,7 @@ func (pk *PublicKey) parse(r io.Reader) (err error) {
 	case PubKeyAlgoElGamal:
 		err = pk.parseElGamal(r)
 	case PubKeyAlgoEdDSA:
-		pk.edk = &edDSAkey{}
+		pk.edk = new(edDSAkey)
 		if err = pk.edk.parse(r); err != nil {
 			return err
 		}

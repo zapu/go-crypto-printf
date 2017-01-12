@@ -545,26 +545,6 @@ func mpiPointByteLength(curve elliptic.Curve) int {
 	return (curve.Params().P.BitLen() + 7) / 8
 }
 
-// writePointMPI serializes X,Y point coordinates to io.Writer w.
-// Curve has to be passed as an argument because the bitlength is
-// determined based on P parameter of the curve.
-func writePointMPI(w io.Writer, curve elliptic.Curve, X, Y *big.Int) (err error) {
-	byteLen := mpiPointByteLength(curve)
-	bitLen := byteLen * 8
-
-	// 2 coords + 3 bits to encode 0x4
-	mpiBitSize := 2*bitLen + 3
-	w.Write([]byte{byte(mpiBitSize >> 8), byte(mpiBitSize), 0x4})
-
-	// write zero-padded coordinates
-	_, err = WritePaddedBigInt(w, byteLen, X)
-	if err != nil {
-		return
-	}
-	_, err = WritePaddedBigInt(w, byteLen, Y)
-	return
-}
-
 func readPointMPI(r io.Reader, curve elliptic.Curve) (X, Y *parsedMPI, err error) {
 	X = nil
 	Y = nil
@@ -600,7 +580,7 @@ func readPointMPI(r io.Reader, curve elliptic.Curve) (X, Y *parsedMPI, err error
 		Y.bitLength = uint16(coordLen * 8)
 		_, err = readFull(r, Y.bytes)
 		if err != nil {
-			return
+			return nil, nil, err
 		}
 	} else if header == 0x40 {
 		//if mpiBitSize != coordBitLen + 7 {
@@ -614,31 +594,13 @@ func readPointMPI(r io.Reader, curve elliptic.Curve) (X, Y *parsedMPI, err error
 		X.bitLength = uint16(coordLen * 8)
 		_, err = readFull(r, X.bytes)
 		if err != nil {
-			return
+			return nil, nil, err
 		}
 	} else {
 		err = errors.StructuralError("Unknown MPI type.")
 	}
 
-	return
-}
-
-// writePointMPI40 serializes X point coordinate to io.Writer w
-// with the 0x40 encoding. Used by cv25519 ECDH.
-func writePointMPI40(w io.Writer, curve elliptic.Curve, X *big.Int) error {
-	byteLen := mpiPointByteLength(curve)
-	bitLen := byteLen * 8
-
-	// 2 coords + 3 bits to encode 0x4
-	mpiBitSize := bitLen + 7
-	_, err := w.Write([]byte{byte(mpiBitSize >> 8), byte(mpiBitSize), 0x40})
-	if err != nil {
-		return err
-	}
-
-	// write zero-padded coordinates
-	_, err = WritePaddedBigInt(w, byteLen, X)
-	return err
+	return X, Y, nil
 }
 
 // writeBig serializes a *big.Int to w.

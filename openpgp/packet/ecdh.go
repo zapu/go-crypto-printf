@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/keybase/go-crypto/curve25519"
 	"github.com/keybase/go-crypto/openpgp/ecdh"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/s2k"
@@ -70,13 +71,33 @@ func serializeEncryptedKeyECDH(w io.Writer, rand io.Reader, header [10]byte, pub
 		return err
 	}
 
-	packetLen := len(header) /* header length */
-	packetLen += 3 + 2*mpiPointByteLength(ecdhpub.Curve)
-	packetLen += 1 /* ciphertext size */ + len(C)
+	mpis := curve25519.Marshal(ecdhpub.Curve, Vx, Vy)
+	mpiBitLen := len(mpis) * 8
+
+	packetLen := len(header) /* header length in bytes */
+	packetLen += 2 /* mpi length in bits */ + len(mpis)
+	packetLen += 1 /* ciphertext size in bytes */ + len(C)
 
 	err = serializeHeader(w, packetTypeEncryptedKey, packetLen)
+	if err != nil {
+		return err
+	}
+
 	_, err = w.Write(header[:])
-	writePointMPI(w, ecdhpub.Curve, Vx, Vy)
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write([]byte{byte(mpiBitLen >> 8), byte(mpiBitLen)})
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write(mpis[:])
+	if err != nil {
+		return err
+	}
+
 	w.Write([]byte{byte(len(C))})
 	w.Write(C[:])
 	return nil

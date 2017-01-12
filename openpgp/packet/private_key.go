@@ -21,8 +21,6 @@ import (
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/s2k"
 	"github.com/keybase/go-crypto/rsa"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 // PrivateKey represents a possibly encrypted private key. See RFC 4880,
@@ -36,6 +34,10 @@ type PrivateKey struct {
 	PrivateKey    interface{} // An *rsa.PrivateKey or *dsa.PrivateKey.
 	sha1Checksum  bool
 	iv            []byte
+}
+
+type EdDSAPrivateKey struct {
+	seed parsedMPI
 }
 
 func NewRSAPrivateKey(currentTime time.Time, priv *rsa.PrivateKey) *PrivateKey {
@@ -172,6 +174,8 @@ func (pk *PrivateKey) Serialize(w io.Writer) (err error) {
 			err = serializeECDSAPrivateKey(privateKeyBuf, priv)
 		case *ecdh.PrivateKey:
 			err = serializeECDHPrivateKey(privateKeyBuf, priv)
+		case *EdDSAPrivateKey:
+			err = serializeEdDSAPrivateKey(privateKeyBuf, priv)
 		default:
 			err = errors.InvalidArgumentError("unknown private key type")
 		}
@@ -240,6 +244,10 @@ func serializeECDSAPrivateKey(w io.Writer, priv *ecdsa.PrivateKey) error {
 
 func serializeECDHPrivateKey(w io.Writer, priv *ecdh.PrivateKey) error {
 	return writeBig(w, priv.X)
+}
+
+func serializeEdDSAPrivateKey(w io.Writer, priv *EdDSAPrivateKey) error {
+	return writeMPI(w, priv.seed.bitLength, priv.seed.bytes)
 }
 
 // Decrypt decrypts an encrypted private key using a passphrase.
@@ -417,15 +425,15 @@ func (pk *PrivateKey) parseECDSAPrivateKey(data []byte) (err error) {
 }
 
 func (pk *PrivateKey) parseEdDSAPrivateKey(data []byte) (err error) {
-	spew.Dump(pk.PublicKey.PublicKey)
+	eddsaPriv := new(EdDSAPrivateKey)
 
 	buf := bytes.NewBuffer(data)
-	d, _, err := readMPI(buf)
+	eddsaPriv.seed.bytes, eddsaPriv.seed.bitLength, err = readMPI(buf)
 	if err != nil {
 		return
 	}
-	spew.Dump(d)
-	//pk.PrivateKey = ecdsaPriv
+
+	pk.PrivateKey = eddsaPriv
 	pk.Encrypted = false
 	pk.encryptedData = nil
 
