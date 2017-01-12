@@ -185,9 +185,10 @@ func UnpadBuffer(buf []byte, data_len int) []byte {
 	return out_buf
 }
 
-func (e *PublicKey) Encrypt(random io.Reader, kdf_params []byte, plain []byte, hash crypto.Hash) (Vx *big.Int, Vy *big.Int, C []byte, err error) {
+func (e *PublicKey) Encrypt(random io.Reader, kdf_params []byte, plain []byte, hash crypto.Hash, kdf_key_size int) (Vx *big.Int, Vy *big.Int, C []byte, err error) {
 	curve_params := e.Curve.Params()
 
+	// TODO(zapu): Replace with elliptic.GenerateKey
 	v, err := RandomScalar(random, curve_params.N)
 	if err != nil {
 		return nil, nil, nil, err
@@ -210,7 +211,7 @@ func (e *PublicKey) Encrypt(random io.Reader, kdf_params []byte, plain []byte, h
 
 	// Take only as many bytes from key as the key length (the hash
 	// result might be bigger)
-	encrypted, err := AESKeyWrap(key[:32], plain)
+	encrypted, err := AESKeyWrap(key[:kdf_key_size], plain)
 
 	return Vx, Vy, encrypted, nil
 }

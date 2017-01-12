@@ -37,7 +37,9 @@ func decryptKeyECDH(priv *PrivateKey, X, Y *big.Int, C []byte) (out []byte, err 
 	}
 
 	key := ecdhpriv.KDF(Sx, kdf_params, hash)
-	decrypted, err := ecdh.AESKeyUnwrap(key[:32], C)
+	key_size := CipherFunction(priv.ecdh.KdfAlgo).KeySize()
+
+	decrypted, err := ecdh.AESKeyUnwrap(key[:key_size], C)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +64,8 @@ func serializeEncryptedKeyECDH(w io.Writer, rand io.Reader, header [10]byte, pub
 		return errors.InvalidArgumentError("invalid hash id in private key")
 	}
 
-	Vx, Vy, C, err := ecdhpub.Encrypt(rand, kdfp, keyBlock, hash)
+	kdf_key_size := CipherFunction(pub.ecdh.KdfAlgo).KeySize()
+	Vx, Vy, C, err := ecdhpub.Encrypt(rand, kdfp, keyBlock, hash, kdf_key_size)
 	if err != nil {
 		return err
 	}
