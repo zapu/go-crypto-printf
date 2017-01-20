@@ -163,6 +163,9 @@ func TestInvalid(t *testing.T) {
 	test_decrypt(privKey384, payloadInvalidPadding)
 	test_decrypt(privKey384, payloadInvalidPadding2)
 	test_decrypt(privKey384, payloadInvalidKDFParams)
+
+	test_decrypt(privKeyCv25519, bad25519_1)
+	test_decrypt(privKeyCv25519, bad25519_2)
 }
 
 const privKey521 = `-----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -268,4 +271,27 @@ HIBPjrhz1ZBe5Ek541+3IH+80o+hpOSUKdVR0DbxQ1qpY79S7VXcDCtJXfjvp1WT
 9YlMKfRkjXO/S1INtnEcyX3xfeHGdsMj4DvifXny2eDX4NXgW+TU+b3hvaY9u6QS
 7eE4lCHI4inRXO7hh6EA
 =0LQy
+-----END PGP MESSAGE-----`
+
+// "Invalid data"
+const bad25519_1 = `-----BEGIN PGP MESSAGE-----
+
+wW4DR1BH23/8iIwSAgMEu1ESwaqbgUmf6B/em+mGRi1oLk2YBhc9NI/S9VVGCwgA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACDZVt9FSTCqIve2XHyIqhSg
+/bGvE+XpY0jPs86Mbxg1F9LgAeS+FpD/U5Kw/LBX6z9FidwQ4YLo4KPgyuHEGeDt
+4jPB0TLgQuVDMKvhpHEvBVgKfejBPeRZ41OCtoL0r0f6W1m93YyPHOAY4va8EZTg
+5+DW4N7kjum4qJta2wDrpNATn/BbFeIx9CgZ4S0rAA==
+=Nxt6
+-----END PGP MESSAGE-----`
+
+// Curve25519 ECDH encryption with invalid encoding: packet size is
+// wrong, so the parser ends up reading new openpgp packet too early.
+// gpg fails with "gpg: [don't know]: invalid packet (ctb=51)".
+const bad25519_2 = `-----BEGIN PGP MESSAGE-----
+
+wW4DR1BH23/8iIwSAQhA9DDlK1QCvLLFHSWSRui8HTF+PVfpeWbYDjrtNuHtGHcg
+XmBEOyBvK2feO/ckDh4HVPLsH6VlusXuwPZUS5cBEwPS4AHk7+kAQ7hb/PFa3nkq
+k3la1OGaV+DP4MPhO8bgdOI0lf2X4F/lWNr5QenN4SCH2vCkNjq8qmu4L8psfUAx
+SoATPSoAgr7ghuJBU8c94MDgmOC+5FHKHDYHn1BNf1O6wnR9bcvijpFbi+E+GwA=
+=A5sH
 -----END PGP MESSAGE-----`
