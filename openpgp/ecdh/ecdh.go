@@ -7,6 +7,7 @@ import (
 	"crypto/elliptic"
 	"encoding/binary"
 	"errors"
+	"github.com/keybase/go-crypto/curve25519"
 	"io"
 	"math/big"
 )
@@ -223,4 +224,27 @@ func nonZeroRandomBytes(s []byte, rand io.Reader) (err error) {
 	}
 
 	return nil
+}
+
+// elliptic.Marshal and elliptic.Unmarshal only marshals uncompressed
+// 0x4 MPI types. These functions will check if the curve is cv25519,
+// and if so, use 0x40 compressed type to (un)marshal. Otherwise,
+// elliptic.(Un)marshal will be called.
+
+func Marshal(curve elliptic.Curve, x, y *big.Int) []byte {
+	cv, ok := curve25519.ToCurve25519(curve)
+	if !ok {
+		return elliptic.Marshal(curve, x, y)
+	} else {
+		return cv.MarshalType40(x, y)
+	}
+}
+
+func Unmarshal(curve elliptic.Curve, data []byte) (x, y *big.Int) {
+	cv, ok := curve25519.ToCurve25519(curve)
+	if !ok {
+		return elliptic.Unmarshal(curve, data)
+	} else {
+		return cv.UnmarshalType40(data)
+	}
 }

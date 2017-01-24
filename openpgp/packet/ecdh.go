@@ -5,7 +5,6 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/keybase/go-crypto/curve25519"
 	"github.com/keybase/go-crypto/openpgp/ecdh"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/s2k"
@@ -71,7 +70,7 @@ func serializeEncryptedKeyECDH(w io.Writer, rand io.Reader, header [10]byte, pub
 		return err
 	}
 
-	mpis := curve25519.Marshal(ecdhpub.Curve, Vx, Vy)
+	mpis := ecdh.Marshal(ecdhpub.Curve, Vx, Vy)
 	mpiBitLen := len(mpis) * 8
 
 	packetLen := len(header) /* header length in bytes */

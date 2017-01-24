@@ -153,8 +153,8 @@ func (f *ecdsaKey) newECDH() (*ecdh.PublicKey, error) {
 	} else {
 		return nil, errors.UnsupportedError(fmt.Sprintf("unsupported oid: %x", f.oid))
 	}
-	// curve25519.Unmarshal handles unmarshaling for all curve types.
-	x, y := curve25519.Unmarshal(c, f.p.bytes)
+	// ecdh.Unmarshal handles unmarshaling for all curve types.
+	x, y := ecdh.Unmarshal(c, f.p.bytes)
 	if x == nil {
 		return nil, errors.UnsupportedError("failed to parse EC point")
 	}

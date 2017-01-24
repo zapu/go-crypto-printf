@@ -73,27 +73,9 @@ func (cv25519Curve) UnmarshalType40(data []byte) (x, y *big.Int) {
 	return x, nil
 }
 
-// elliptic.Marshal and elliptic.Unmarshal only marshals uncompressed
-// 0x4 MPI types. These functions will check if the curve is cv25519,
-// and if so, use 0x40 compressed type to (un)marshal. Otherwise,
-// elliptic.(Un)marshal will be called.
-
-func Marshal(curve elliptic.Curve, x, y *big.Int) []byte {
-	cv, ok := curve.(cv25519Curve)
-	if !ok {
-		return elliptic.Marshal(curve, x, y)
-	} else {
-		return cv.MarshalType40(x, y)
-	}
-}
-
-func Unmarshal(curve elliptic.Curve, data []byte) (x, y *big.Int) {
-	cv, ok := curve.(cv25519Curve)
-	if !ok {
-		return elliptic.Unmarshal(curve, data)
-	} else {
-		return cv.UnmarshalType40(data)
-	}
+func ToCurve25519(cv elliptic.Curve) (cv25519Curve, bool) {
+	cv2, ok := cv.(cv25519Curve)
+	return cv2, ok
 }
 
 func initCv25519() {
