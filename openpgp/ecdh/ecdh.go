@@ -23,13 +23,13 @@ type PrivateKey struct {
 }
 
 func (e *PublicKey) KDF(S []byte, kdf_params []byte, hash crypto.Hash) []byte {
-	S_len := (e.Curve.Params().P.BitLen() + 7) / 8
+	sLen := (e.Curve.Params().P.BitLen() + 7) / 8
 	buf := new(bytes.Buffer)
 	buf.Write([]byte{0, 0, 0, 1})
-	if S_len > len(S) {
+	if sLen > len(S) {
 		// If we got invalid S (bigger than curve's P), we are going
 		// to produce invalid key. Garbage in, garbage out.
-		buf.Write(make([]byte, S_len-len(S)))
+		buf.Write(make([]byte, sLen-len(S)))
 	}
 	buf.Write(S)
 	buf.Write(kdf_params)
