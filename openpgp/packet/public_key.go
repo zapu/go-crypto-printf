@@ -110,21 +110,31 @@ func (f *ecdsaKey) serialize(w io.Writer) (err error) {
 	return writeMPIs(w, f.p)
 }
 
+func getCurveByOid(oid []byte) (elliptic.Curve) {
+	switch {
+	case bytes.Equal(oid, oidCurveP256):
+		return elliptic.P256()
+	case bytes.Equal(oid, oidCurveP384):
+		return elliptic.P384()
+	case bytes.Equal(oid, oidCurveP521):
+		return elliptic.P521()
+	case bytes.Equal(oid, oidCurveP256r1):
+		return brainpool.P256r1()
+	case bytes.Equal(oid, oidCurveP384r1):
+		return brainpool.P384r1()
+	case bytes.Equal(oid, oidCurveP512r1):
+		return brainpool.P512r1()
+	case bytes.Equal(oid, oidCurve25519):
+		return curve25519.Cv25519()
+	default:
+		return nil
+	}
+}
+
 func (f *ecdsaKey) newECDSA() (*ecdsa.PublicKey, error) {
-	var c elliptic.Curve
-	if bytes.Equal(f.oid, oidCurveP256) {
-		c = elliptic.P256()
-	} else if bytes.Equal(f.oid, oidCurveP384) {
-		c = elliptic.P384()
-	} else if bytes.Equal(f.oid, oidCurveP521) {
-		c = elliptic.P521()
-	} else if bytes.Equal(f.oid, oidCurveP256r1) {
-		c = brainpool.P256r1()
-	} else if bytes.Equal(f.oid, oidCurveP384r1) {
-		c = brainpool.P384r1()
-	} else if bytes.Equal(f.oid, oidCurveP512r1) {
-		c = brainpool.P512r1()
-	} else {
+	var c = getCurveByOid(f.oid)
+	// Curve25519 should not be used in ECDSA.
+	if c == nil || bytes.Equal(f.oid, oidCurve25519) {
 		return nil, errors.UnsupportedError(fmt.Sprintf("unsupported oid: %x", f.oid))
 	}
 	// Note: Unmarshal already checks if point is on curve.
@@ -136,22 +146,8 @@ func (f *ecdsaKey) newECDSA() (*ecdsa.PublicKey, error) {
 }
 
 func (f *ecdsaKey) newECDH() (*ecdh.PublicKey, error) {
-	var c elliptic.Curve
-	if bytes.Equal(f.oid, oidCurveP256) {
-		c = elliptic.P256()
-	} else if bytes.Equal(f.oid, oidCurveP384) {
-		c = elliptic.P384()
-	} else if bytes.Equal(f.oid, oidCurveP521) {
-		c = elliptic.P521()
-	} else if bytes.Equal(f.oid, oidCurveP256r1) {
-		c = brainpool.P256r1()
-	} else if bytes.Equal(f.oid, oidCurveP384r1) {
-		c = brainpool.P384r1()
-	} else if bytes.Equal(f.oid, oidCurveP512r1) {
-		c = brainpool.P512r1()
-	} else if bytes.Equal(f.oid, oidCurve25519) {
-		c = curve25519.Cv25519()
-	} else {
+	var c  = getCurveByOid(f.oid)
+	if c == nil {
 		return nil, errors.UnsupportedError(fmt.Sprintf("unsupported oid: %x", f.oid))
 	}
 	// ecdh.Unmarshal handles unmarshaling for all curve types. It
