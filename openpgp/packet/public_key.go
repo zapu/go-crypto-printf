@@ -131,6 +131,9 @@ func (f *ecdsaKey) newECDSA() (*ecdsa.PublicKey, error) {
 	if x == nil {
 		return nil, errors.UnsupportedError("failed to parse EC point")
 	}
+	if !c.IsOnCurve(x,y) {
+		return nil, errors.InvalidArgumentError("EC point does not lie on curve")
+	}
 	return &ecdsa.PublicKey{Curve: c, X: x, Y: y}, nil
 }
 
@@ -157,6 +160,9 @@ func (f *ecdsaKey) newECDH() (*ecdh.PublicKey, error) {
 	x, y := ecdh.Unmarshal(c, f.p.bytes)
 	if x == nil {
 		return nil, errors.UnsupportedError("failed to parse EC point")
+	}
+	if !c.IsOnCurve(x,y) {
+		return nil, errors.InvalidArgumentError("EC point does not lie on curve")
 	}
 	return &ecdh.PublicKey{Curve: c, X: x, Y: y}, nil
 }
