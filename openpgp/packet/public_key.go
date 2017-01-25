@@ -127,12 +127,10 @@ func (f *ecdsaKey) newECDSA() (*ecdsa.PublicKey, error) {
 	} else {
 		return nil, errors.UnsupportedError(fmt.Sprintf("unsupported oid: %x", f.oid))
 	}
+	// Note: Unmarshal already checks if point is on curve.
 	x, y := elliptic.Unmarshal(c, f.p.bytes)
 	if x == nil {
 		return nil, errors.UnsupportedError("failed to parse EC point")
-	}
-	if !c.IsOnCurve(x,y) {
-		return nil, errors.InvalidArgumentError("EC point does not lie on curve")
 	}
 	return &ecdsa.PublicKey{Curve: c, X: x, Y: y}, nil
 }
@@ -156,13 +154,11 @@ func (f *ecdsaKey) newECDH() (*ecdh.PublicKey, error) {
 	} else {
 		return nil, errors.UnsupportedError(fmt.Sprintf("unsupported oid: %x", f.oid))
 	}
-	// ecdh.Unmarshal handles unmarshaling for all curve types.
+	// ecdh.Unmarshal handles unmarshaling for all curve types. It
+	// also checks if point is on curve.
 	x, y := ecdh.Unmarshal(c, f.p.bytes)
 	if x == nil {
 		return nil, errors.UnsupportedError("failed to parse EC point")
-	}
-	if !c.IsOnCurve(x,y) {
-		return nil, errors.InvalidArgumentError("EC point does not lie on curve")
 	}
 	return &ecdh.PublicKey{Curve: c, X: x, Y: y}, nil
 }

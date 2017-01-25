@@ -70,6 +70,7 @@ func (cv25519Curve) UnmarshalType40(data []byte) (x, y *big.Int) {
 		return nil, nil
 	}
 	x = new(big.Int).SetBytes(data[1:])
+	// Any x is a valid curve point.
 	return x, new(big.Int)
 }
 
@@ -82,7 +83,7 @@ func ToCurve25519(cv elliptic.Curve) (cv25519Curve, bool) {
 
 func initCv25519() {
 	cv25519.CurveParams = &elliptic.CurveParams{Name: "Curve 25519"}
-	// Some code relies of these parameters being available for
+	// Some code relies on these parameters being available for
 	// checking Curve coordinate length. They should not be used
 	// directly for any calculations.
 	cv25519.P, _ = new (big.Int).SetString("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed", 16)
