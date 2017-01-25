@@ -12,7 +12,7 @@ type cv25519Curve struct {
 	*elliptic.CurveParams
 }
 
-func copy_reverse(dst []byte, src []byte) {
+func copyReverse(dst []byte, src []byte) {
 	// Curve 25519 multiplication functions expect scalars in reverse
 	// order than PGP. To keep the curve25519Curve type consistent
 	// with other curves, we reverse it here.
@@ -24,13 +24,13 @@ func copy_reverse(dst []byte, src []byte) {
 func (cv25519Curve) ScalarMult(x1, y1 *big.Int, scalar []byte) (x, y *big.Int) {
 	// Assume y1 is 0 with cv25519.
 	var dst [32]byte
-	var x1_bytes [32]byte
-	var scalar_bytes [32]byte
+	var x1Bytes [32]byte
+	var scalarBytes [32]byte
 
-	copy(x1_bytes[:], x1.Bytes()[:32])
-	copy_reverse(scalar_bytes[:], scalar[:32])
+	copy(x1Bytes[:], x1.Bytes()[:32])
+	copyReverse(scalarBytes[:], scalar[:32])
 
-	scalarMult(&dst, &scalar_bytes, &x1_bytes)
+	scalarMult(&dst, &scalarBytes, &x1Bytes)
 
 	x = new(big.Int).SetBytes(dst[:])
 	y = new(big.Int)
@@ -39,16 +39,16 @@ func (cv25519Curve) ScalarMult(x1, y1 *big.Int, scalar []byte) (x, y *big.Int) {
 
 func (cv25519Curve) ScalarBaseMult(scalar []byte) (x, y *big.Int) {
 	var dst [32]byte
-	var scalar_bytes [32]byte
-	copy_reverse(scalar_bytes[:], scalar[:32])
-	scalarMult(&dst, &scalar_bytes, &basePoint)
+	var scalarBytes [32]byte
+	copyReverse(scalarBytes[:], scalar[:32])
+	scalarMult(&dst, &scalarBytes, &basePoint)
 	x = new(big.Int).SetBytes(dst[:])
 	y = new(big.Int)
 	return x, y
 }
 
 func (cv25519Curve) IsOnCurve(bigX, bigY *big.Int) bool {
-	return true
+	return bigY.Sign() == 0 // bigY == 0 ?
 }
 
 func (cv25519Curve) MarshalType40(x, y *big.Int) []byte {
@@ -64,15 +64,17 @@ func (cv25519Curve) MarshalType40(x, y *big.Int) []byte {
 
 func (cv25519Curve) UnmarshalType40(data []byte) (x, y *big.Int) {
 	if len(data) != 1+32 {
-		return
+		return nil, nil
 	}
 	if data[0] != 0x40 {
-		return
+		return nil, nil
 	}
 	x = new(big.Int).SetBytes(data[1:])
-	return x, nil
+	return x, new(big.Int)
 }
 
+// ToCurve25519 casts given elliptic.Curve type to Curve25519 type, or
+// returns nil, false if cast was unsuccessful.
 func ToCurve25519(cv elliptic.Curve) (cv25519Curve, bool) {
 	cv2, ok := cv.(cv25519Curve)
 	return cv2, ok
@@ -80,6 +82,9 @@ func ToCurve25519(cv elliptic.Curve) (cv25519Curve, bool) {
 
 func initCv25519() {
 	cv25519.CurveParams = &elliptic.CurveParams{Name: "Curve 25519"}
+	// Some code relies of these parameters being available for
+	// checking Curve coordinate length. They should not be used
+	// directly for any calculations.
 	cv25519.P, _ = new (big.Int).SetString("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed", 16)
 	cv25519.N, _ = new (big.Int).SetString("1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed", 16)
 	cv25519.Gx, _ = new (big.Int).SetString("9", 16)
@@ -89,6 +94,9 @@ func initCv25519() {
 
 var initonce sync.Once
 
+// Cv25519 returns a Curve which (partially) implements Cv25519. Only
+// ScalarMult and ScalarBaseMult are valid for this curve. Add and
+// Double should not be used.
 func Cv25519() elliptic.Curve {
 	initonce.Do(initCv25519)
 	return cv25519

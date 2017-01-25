@@ -22,7 +22,7 @@ type PrivateKey struct {
 	X *big.Int
 }
 
-func (e *PublicKey) KDF(S []byte, kdf_params []byte, hash crypto.Hash) []byte {
+func (e *PublicKey) KDF(S []byte, kdfParams []byte, hash crypto.Hash) []byte {
 	sLen := (e.Curve.Params().P.BitLen() + 7) / 8
 	buf := new(bytes.Buffer)
 	buf.Write([]byte{0, 0, 0, 1})
@@ -32,7 +32,7 @@ func (e *PublicKey) KDF(S []byte, kdf_params []byte, hash crypto.Hash) []byte {
 		buf.Write(make([]byte, sLen-len(S)))
 	}
 	buf.Write(S)
-	buf.Write(kdf_params)
+	buf.Write(kdfParams)
 
 	hashw := hash.New()
 
@@ -42,7 +42,7 @@ func (e *PublicKey) KDF(S []byte, kdf_params []byte, hash crypto.Hash) []byte {
 	return key
 }
 
-// Implements RFC 3394 Key Unwrapping.
+// AESKeyUnwrap implements RFC 3394 Key Unwrapping.
 func AESKeyUnwrap(key, cipherText []byte) ([]byte, error) {
 	if len(cipherText)%8 != 0 {
 		return nil, errors.New("cipherText must by a multiple of 64 bits")
@@ -86,14 +86,14 @@ func AESKeyUnwrap(key, cipherText []byte) ([]byte, error) {
 	// If A is an appropriate initial value (see 2.2.3),
 	for i := 0; i < 8; i++ {
 		if A[i] != 0xA6 {
-			return nil, errors.New("Failed to unwrap key (A is not IV).")
+			return nil, errors.New("Failed to unwrap key (A is not IV)")
 		}
 	}
 
 	return R, nil
 }
 
-// Implements RFC 3394 Key Wrapping.
+// AESKeyWrap implements RFC 3394 Key Wrapping.
 func AESKeyWrap(key, plainText []byte) ([]byte, error) {
 	if len(plainText)%8 != 0 {
 		return nil, errors.New("plainText must be a multiple of 64 bits")
@@ -144,35 +144,35 @@ func AESKeyWrap(key, plainText []byte) ([]byte, error) {
 	return append(A[:8], R...), nil
 }
 
-func PadBuffer(buf []byte, block_len int) []byte {
-	padding := block_len - (len(buf) % block_len)
+func PadBuffer(buf []byte, blockLen int) []byte {
+	padding := blockLen - (len(buf) % blockLen)
 	if padding == 0 {
 		return buf
 	}
 
-	pad_buf := make([]byte, padding)
-	for i := 0; i < padding; i += 1 {
-		pad_buf[i] = byte(padding)
+	padBuf := make([]byte, padding)
+	for i := 0; i < padding; i++ {
+		padBuf[i] = byte(padding)
 	}
 
-	return append(buf, pad_buf...)
+	return append(buf, padBuf...)
 }
 
-func UnpadBuffer(buf []byte, data_len int) []byte {
-	padding := len(buf) - data_len
-	out_buf := buf[:data_len]
+func UnpadBuffer(buf []byte, dataLen int) []byte {
+	padding := len(buf) - dataLen
+	outBuf := buf[:dataLen]
 
-	for i := data_len; i < len(buf); i += 1 {
+	for i := dataLen; i < len(buf); i++ {
 		if buf[i] != byte(padding) {
 			// Invalid padding - bail out
 			return nil
 		}
 	}
 
-	return out_buf
+	return outBuf
 }
 
-func (e *PublicKey) Encrypt(random io.Reader, kdf_params []byte, plain []byte, hash crypto.Hash, kdf_key_size int) (Vx *big.Int, Vy *big.Int, C []byte, err error) {
+func (e *PublicKey) Encrypt(random io.Reader, kdfParams []byte, plain []byte, hash crypto.Hash, kdfKeySize int) (Vx *big.Int, Vy *big.Int, C []byte, err error) {
 	// Vx, Vy - encryption key
 
 	// Note for Curve 25519 - curve25519 library already does key
@@ -193,11 +193,11 @@ func (e *PublicKey) Encrypt(random io.Reader, kdf_params []byte, plain []byte, h
 	// revealing encryption key for symmetric encryption later.
 
 	plain = PadBuffer(plain, 8)
-	key := e.KDF(Sx.Bytes(), kdf_params, hash)
+	key := e.KDF(Sx.Bytes(), kdfParams, hash)
 
 	// Take only as many bytes from key as the key length (the hash
 	// result might be bigger)
-	encrypted, err := AESKeyWrap(key[:kdf_key_size], plain)
+	encrypted, err := AESKeyWrap(key[:kdfKeySize], plain)
 
 	return Vx, Vy, encrypted, nil
 }
