@@ -207,25 +207,6 @@ func (e *PrivateKey) DecryptShared(X, Y *big.Int) []byte {
 	return Sx.Bytes()
 }
 
-// nonZeroRandomBytes fills the given slice with non-zero random octets.
-func nonZeroRandomBytes(s []byte, rand io.Reader) (err error) {
-	_, err = io.ReadFull(rand, s)
-	if err != nil {
-		return err
-	}
-
-	for i := 0; i < len(s); i++ {
-		for s[i] == 0 {
-			_, err = io.ReadFull(rand, s[i:i+1])
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 // elliptic.Marshal and elliptic.Unmarshal only marshals uncompressed
 // 0x4 MPI types. These functions will check if the curve is cv25519,
 // and if so, use 0x40 compressed type to (un)marshal. Otherwise,
