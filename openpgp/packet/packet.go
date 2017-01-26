@@ -545,7 +545,10 @@ func mpiPointByteLength(curve elliptic.Curve) int {
 	return (curve.Params().P.BitLen() + 7) / 8
 }
 
-func readPointMPI(r io.Reader, curve elliptic.Curve) (X, Y *parsedMPI, err error) {
+// Like elliptic.Unmarshal or ecdh.Unmarshal but you don't need to
+// know curve beforehand. It will read both uncompressed (0x4) and
+// compressed (0x40) points basing on header.
+func readPointMPI(r io.Reader) (X, Y *parsedMPI, err error) {
 	X = nil
 	Y = nil
 	var buf [2]byte
@@ -554,17 +557,11 @@ func readPointMPI(r io.Reader, curve elliptic.Curve) (X, Y *parsedMPI, err error
 		return
 	}
 
-	//coordBitLen := mpiPointByteLength(curve) * 8
 	mpiBitSize := int(buf[0])<<8 | int(buf[1])
 	mpiByteSize := (mpiBitSize + 7) / 8
 	r.Read(buf[:1])
 	header := buf[0]
 	if header == 0x4 {
-		//if mpiBitSize != 2 * coordBitLen + 3 {
-		//	err = errors.StructuralError("Invalid MPI packet size.")
-		//	return
-		//}
-
 		coordLen := (mpiByteSize - 1) / 2
 
 		X = new(parsedMPI)
@@ -583,11 +580,6 @@ func readPointMPI(r io.Reader, curve elliptic.Curve) (X, Y *parsedMPI, err error
 			return nil, nil, err
 		}
 	} else if header == 0x40 {
-		//if mpiBitSize != coordBitLen + 7 {
-		//	err = errors.StructuralError("Invalid MPI packet size.")
-		//	return
-		//}
-
 		coordLen := mpiByteSize - 1
 		X = new(parsedMPI)
 		X.bytes = make([]byte, coordLen)

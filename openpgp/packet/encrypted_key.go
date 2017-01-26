@@ -50,7 +50,7 @@ func (e *EncryptedKey) parse(r io.Reader) (err error) {
 		}
 		e.encryptedMPI2.bytes, e.encryptedMPI2.bitLength, err = readMPI(r)
 	case PubKeyAlgoECDH:
-		x, y, err := readPointMPI(r, nil)
+		x, y, err := readPointMPI(r)
 		if err != nil {
 			return err
 		}
@@ -99,6 +99,9 @@ func (e *EncryptedKey) Decrypt(priv *PrivateKey, config *Config) error {
 		c2 := new(big.Int).SetBytes(e.encryptedMPI2.bytes)
 		b, err = elgamal.Decrypt(priv.PrivateKey.(*elgamal.PrivateKey), c1, c2)
 	case PubKeyAlgoECDH:
+		// Note: when dealing with encrypted key MPIs read from compressed
+		// point (with only x coord), encryptedMPI2.bytes will be nil. It
+		// is fine, though, because SetBytes(nil) sets the big number to 0.
 		c1 := new(big.Int).SetBytes(e.encryptedMPI1.bytes)
 		c2 := new(big.Int).SetBytes(e.encryptedMPI2.bytes)
 		b, err = decryptKeyECDH(priv, c1, c2, e.ecdh_C)

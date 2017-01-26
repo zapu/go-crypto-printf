@@ -110,7 +110,7 @@ func (f *ecdsaKey) serialize(w io.Writer) (err error) {
 	return writeMPIs(w, f.p)
 }
 
-func getCurveByOid(oid []byte) (elliptic.Curve) {
+func getCurveByOid(oid []byte) elliptic.Curve {
 	switch {
 	case bytes.Equal(oid, oidCurveP256):
 		return elliptic.P256()
@@ -146,7 +146,7 @@ func (f *ecdsaKey) newECDSA() (*ecdsa.PublicKey, error) {
 }
 
 func (f *ecdsaKey) newECDH() (*ecdh.PublicKey, error) {
-	var c  = getCurveByOid(f.oid)
+	var c = getCurveByOid(f.oid)
 	if c == nil {
 		return nil, errors.UnsupportedError(fmt.Sprintf("unsupported oid: %x", f.oid))
 	}
