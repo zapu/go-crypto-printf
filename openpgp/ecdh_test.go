@@ -407,15 +407,15 @@ Ah7uZZrR8ZdSpyxffRFB4XUJrpQfhn2/AQCB5CNbch2Wry/8X/E44/SIjGtYIW9+
 
 `
 
-// This payload has "incorrectly" formatted MPIs for encoding
-// encryption key coordinates. The big numbers are encoded to be
-// longer, padded with a lot of zeros (notice the As in the base64
-// representation below). The total MPI size (read in readPointMPI) is
-// 1459 bits for this buffer, where normally it would be around 1064:
-// 521 bits per coordinate + bits needed to encode "0x4" header.
-// Decoding should be flexible here, because depending on the
-// implementation, it may round the total size to nearest byte or save
-// exact number of bits (2 * 521 + 3 bits for 0x4).
+// This payload has "unusual" formatting of encryption key coordinates
+// MPIs. The big numbers are encoded to be longer, padded with a lot
+// of zeros (notice the As in the base64 representation below). The
+// total MPI size (read in readPointMPI) is 1459 bits for this buffer,
+// where normally it would be around 1064: 521 bits per coordinate +
+// bits needed to encode "0x4" header. Decoding should be flexible
+// here, because depending on the implementation, it may round the
+// total size to nearest byte or save exact number of bits (2 * 521 +
+// 3 bits for 0x4).
 const payload521longMPIs = `-----BEGIN PGP MESSAGE-----
 Version: Keybase OpenPGP v2.0.58
 Comment: https://keybase.io/crypto
