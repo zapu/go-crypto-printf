@@ -554,7 +554,7 @@ func readPointMPI(r io.Reader) (X, Y *parsedMPI, err error) {
 	var buf [2]byte
 	_, err = readFull(r, buf[0:2])
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
 	mpiBitSize := int(buf[0])<<8 | int(buf[1])
@@ -569,7 +569,7 @@ func readPointMPI(r io.Reader) (X, Y *parsedMPI, err error) {
 		X.bitLength = uint16(coordLen * 8)
 		_, err = readFull(r, X.bytes)
 		if err != nil {
-			return
+			return nil, nil, err
 		}
 
 		Y = new(parsedMPI)
@@ -590,6 +590,7 @@ func readPointMPI(r io.Reader) (X, Y *parsedMPI, err error) {
 		}
 	} else {
 		err = errors.StructuralError("Unknown MPI type.")
+		return nil, nil, err
 	}
 
 	return X, Y, nil
