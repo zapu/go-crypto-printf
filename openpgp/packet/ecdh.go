@@ -10,6 +10,8 @@ import (
 	"github.com/keybase/go-crypto/openpgp/s2k"
 )
 
+// ECDHKdfParams generates KDF parameters sequence for given
+// PublicKey. See https://tools.ietf.org/html/rfc6637#section-8
 func ECDHKdfParams(pub *PublicKey) []byte {
 	buf := new(bytes.Buffer)
 	oid := pub.ec.oid
@@ -30,16 +32,16 @@ func decryptKeyECDH(priv *PrivateKey, X, Y *big.Int, C []byte) (out []byte, err 
 
 	Sx := ecdhpriv.DecryptShared(X, Y)
 
-	kdf_params := ECDHKdfParams(&priv.PublicKey)
+	kdfParams := ECDHKdfParams(&priv.PublicKey)
 	hash, ok := s2k.HashIdToHash(byte(priv.ecdh.KdfHash))
 	if !ok {
 		return nil, errors.InvalidArgumentError("invalid hash id in private key")
 	}
 
-	key := ecdhpriv.KDF(Sx, kdf_params, hash)
-	key_size := CipherFunction(priv.ecdh.KdfAlgo).KeySize()
+	key := ecdhpriv.KDF(Sx, kdfParams, hash)
+	keySize := CipherFunction(priv.ecdh.KdfAlgo).KeySize()
 
-	decrypted, err := ecdh.AESKeyUnwrap(key[:key_size], C)
+	decrypted, err := ecdh.AESKeyUnwrap(key[:keySize], C)
 	if err != nil {
 		return nil, err
 	}
@@ -57,15 +59,15 @@ func decryptKeyECDH(priv *PrivateKey, X, Y *big.Int, C []byte) (out []byte, err 
 
 func serializeEncryptedKeyECDH(w io.Writer, rand io.Reader, header [10]byte, pub *PublicKey, keyBlock []byte) error {
 	ecdhpub := pub.PublicKey.(*ecdh.PublicKey)
-	kdfp := ECDHKdfParams(pub)
+	kdfParams := ECDHKdfParams(pub)
 
 	hash, ok := s2k.HashIdToHash(byte(pub.ecdh.KdfHash))
 	if !ok {
 		return errors.InvalidArgumentError("invalid hash id in private key")
 	}
 
-	kdf_key_size := CipherFunction(pub.ecdh.KdfAlgo).KeySize()
-	Vx, Vy, C, err := ecdhpub.Encrypt(rand, kdfp, keyBlock, hash, kdf_key_size)
+	kdfKeySize := CipherFunction(pub.ecdh.KdfAlgo).KeySize()
+	Vx, Vy, C, err := ecdhpub.Encrypt(rand, kdfParams, keyBlock, hash, kdfKeySize)
 	if err != nil {
 		return err
 	}

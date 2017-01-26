@@ -22,13 +22,16 @@ type PrivateKey struct {
 	X *big.Int
 }
 
+// KDF implements Key Derivation Function as described in
+// https://tools.ietf.org/html/rfc6637#section-7
 func (e *PublicKey) KDF(S []byte, kdfParams []byte, hash crypto.Hash) []byte {
 	sLen := (e.Curve.Params().P.BitLen() + 7) / 8
 	buf := new(bytes.Buffer)
 	buf.Write([]byte{0, 0, 0, 1})
 	if sLen > len(S) {
-		// If we got invalid S (bigger than curve's P), we are going
-		// to produce invalid key. Garbage in, garbage out.
+		// zero-pad the S. If we got invalid S (bigger than curve's
+		// P), we are going to produce invalid key. Garbage in,
+		// garbage out.
 		buf.Write(make([]byte, sLen-len(S)))
 	}
 	buf.Write(S)
@@ -42,7 +45,10 @@ func (e *PublicKey) KDF(S []byte, kdfParams []byte, hash crypto.Hash) []byte {
 	return key
 }
 
-// AESKeyUnwrap implements RFC 3394 Key Unwrapping.
+// AESKeyUnwrap implements RFC 3394 Key Unwrapping. See
+// http://tools.ietf.org/html/rfc3394#section-2.2.1
+// Note: The second described algorithm ("index-based") is implemented
+// here.
 func AESKeyUnwrap(key, cipherText []byte) ([]byte, error) {
 	if len(cipherText)%8 != 0 {
 		return nil, errors.New("cipherText must by a multiple of 64 bits")
@@ -93,7 +99,10 @@ func AESKeyUnwrap(key, cipherText []byte) ([]byte, error) {
 	return R, nil
 }
 
-// AESKeyWrap implements RFC 3394 Key Wrapping.
+// AESKeyWrap implements RFC 3394 Key Wrapping. See
+// https://tools.ietf.org/html/rfc3394#section-2.2.2
+// Note: The second described algorithm ("index-based") is implemented
+// here.
 func AESKeyWrap(key, plainText []byte) ([]byte, error) {
 	if len(plainText)%8 != 0 {
 		return nil, errors.New("plainText must be a multiple of 64 bits")
@@ -144,6 +153,10 @@ func AESKeyWrap(key, plainText []byte) ([]byte, error) {
 	return append(A[:8], R...), nil
 }
 
+// PadBuffer pads byte buffer buf to a length being multiple of
+// blockLen. Additional bytes appended to the buffer have value of the
+// number padded bytes. E.g. if the buffer is 3 bytes short of being
+// 40 bytes total, the appended bytes will be [03, 03, 03].
 func PadBuffer(buf []byte, blockLen int) []byte {
 	padding := blockLen - (len(buf) % blockLen)
 	if padding == 0 {
@@ -158,6 +171,9 @@ func PadBuffer(buf []byte, blockLen int) []byte {
 	return append(buf, padBuf...)
 }
 
+// UnpadBuffer verifies that buffer contains proper padding and
+// returns buffer without the padding, or nil if the padding was
+// invalid.
 func UnpadBuffer(buf []byte, dataLen int) []byte {
 	padding := len(buf) - dataLen
 	outBuf := buf[:dataLen]
@@ -212,6 +228,8 @@ func (e *PrivateKey) DecryptShared(X, Y *big.Int) []byte {
 // and if so, use 0x40 compressed type to (un)marshal. Otherwise,
 // elliptic.(Un)marshal will be called.
 
+// Marshal encodes point into either 0x4 uncompressed point form, or
+// 0x40 compressed point for Curve 25519.
 func Marshal(curve elliptic.Curve, x, y *big.Int) []byte {
 	cv, ok := curve25519.ToCurve25519(curve)
 	if !ok {
@@ -221,6 +239,9 @@ func Marshal(curve elliptic.Curve, x, y *big.Int) []byte {
 	}
 }
 
+// Unmarshal converts point, serialized by Marshal, into x, y pair.
+// For 0x40 compressed points (for Curve 25519), y will always be 0.
+// It is an error if point is not on the curve, On error, x = nil.
 func Unmarshal(curve elliptic.Curve, data []byte) (x, y *big.Int) {
 	cv, ok := curve25519.ToCurve25519(curve)
 	if !ok {

@@ -51,6 +51,11 @@ func (cv25519Curve) IsOnCurve(bigX, bigY *big.Int) bool {
 	return bigY.Sign() == 0 // bigY == 0 ?
 }
 
+// More information about 0x40 point format:
+// https://tools.ietf.org/html/draft-koch-eddsa-for-openpgp-00#section-3
+// In addition to uncompressed point format described here:
+// https://tools.ietf.org/html/rfc6637#section-6
+
 func (cv25519Curve) MarshalType40(x, y *big.Int) []byte {
 	byteLen := 32
 
