@@ -168,6 +168,25 @@ func TestInvalid(t *testing.T) {
 	testDecrypt(privKeyCv25519, bad25519_2)
 }
 
+func TestLongCoords(t *testing.T) {
+	entities, err := ReadArmoredKeyRing(strings.NewReader(privKey521))
+	block, err := armor.Decode(strings.NewReader(payload521longMPIs))
+	md, err := ReadMessage(block.Body, entities, nil, nil)
+	if err != nil {
+		t.Fatalf("Failed to ReadMessage.")
+	}
+
+	expected := "purpleschala"
+	contents, err := ioutil.ReadAll(md.UnverifiedBody)
+	if err != nil {
+		t.Fatalf("Failed to ReadAll")
+	}
+
+	if string(contents) != expected {
+		t.Errorf("bad UnverifiedBody got:\"%s\" want:\"%s\"", string(contents), expected)
+	}
+}
+
 func TestImports(t *testing.T) {
 	entities, err := ReadArmoredKeyRing(strings.NewReader(pub25519kbpgp))
 	if err != nil {
@@ -385,5 +404,30 @@ Ah7uZZrR8ZdSpyxffRFB4XUJrpQfhn2/AQCB5CNbch2Wry/8X/E44/SIjGtYIW9+
 /begQfmUIvxAAw==
 =fF1S
 -----END PGP PUBLIC KEY BLOCK-----
+
+`
+
+// This payload has "incorrectly" formatted MPIs for encoding
+// encryption key coordinates. The big numbers are encoded to be
+// longer, padded with a lot of zeros (notice the As in the base64
+// representation below). The total MPI size (read in readPointMPI) is
+// 1459 bits for this buffer, where normally it would be around 1064:
+// 521 bits per coordinate + bits needed to encode "0x4" header.
+// Decoding should be flexible here, because depending on the
+// implementation, it may round the total size to nearest byte or save
+// exact number of bits (2 * 521 + 3 bits for 0x4).
+const payload521longMPIs = `-----BEGIN PGP MESSAGE-----
+Version: Keybase OpenPGP v2.0.58
+Comment: https://keybase.io/crypto
+
+wcA0A6pi0WoSlxTXEgWzBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/ZTuFZa3
+go5bAv8SLZd5vTQzjQiqiXfaQUX3dQu+zytgEeiugIshlJ7JykTPGhdQFVSiKQYe
+a4RKpgbn8SkNhyIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaR1kL+5vnf9E0wv
+vGDKg1jo0uEGYVodxTwk8QuqbxWiCT/jOH9kybjECSPlkDkbUIOezOfaTlwde0Wo
+XUNWZ/WrMOJHerpQvMvPNjEwMSGnsIZPh8/Hafj7j8OauMG5EWgCrzsxv1mgsRXP
+QkNog/5dM9JIAcT8RpDaFecdhRag6ZPuRKmNuhiFtR7o0spcqX2UkJ3FPB7UydX3
+ch9PkTNL1BVD++JqYQE9eaIqlCTAsHwCgO6pQkQqPUvB
+=y7cW
+-----END PGP MESSAGE-----
 
 `
