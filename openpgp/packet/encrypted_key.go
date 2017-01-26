@@ -67,11 +67,11 @@ func (e *EncryptedKey) parse(r io.Reader) (err error) {
 	}
 
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = consumeAll(r)
-	return
+	return err
 }
 
 func checksumKeyMaterial(key []byte) uint16 {
