@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/keybase/go-crypto/openpgp/ecdh"
 	"github.com/keybase/go-crypto/openpgp/elgamal"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/rsa"
@@ -50,13 +51,9 @@ func (e *EncryptedKey) parse(r io.Reader) (err error) {
 		}
 		e.encryptedMPI2.bytes, e.encryptedMPI2.bitLength, err = readMPI(r)
 	case PubKeyAlgoECDH:
-		x, y, err := readPointMPI(r)
+		e.encryptedMPI1.bytes, e.encryptedMPI1.bitLength, err = readMPI(r)
 		if err != nil {
 			return err
-		}
-		e.encryptedMPI1 = *x
-		if y != nil {
-			e.encryptedMPI2 = *y
 		}
 		_, err = readFull(r, buf[:1]) // read C len (1 byte)
 		if err != nil {
@@ -99,11 +96,11 @@ func (e *EncryptedKey) Decrypt(priv *PrivateKey, config *Config) error {
 		c2 := new(big.Int).SetBytes(e.encryptedMPI2.bytes)
 		b, err = elgamal.Decrypt(priv.PrivateKey.(*elgamal.PrivateKey), c1, c2)
 	case PubKeyAlgoECDH:
-		// Note: when dealing with encrypted key MPIs read from compressed
-		// point (with only x coord), encryptedMPI2.bytes will be nil. It
-		// is fine, though, because SetBytes(nil) sets the big number to 0.
-		c1 := new(big.Int).SetBytes(e.encryptedMPI1.bytes)
-		c2 := new(big.Int).SetBytes(e.encryptedMPI2.bytes)
+		// Note: Unmarshal checks if point is on the curve.
+		c1, c2 := ecdh.Unmarshal(priv.PrivateKey.(*ecdh.PrivateKey).Curve, e.encryptedMPI1.bytes)
+		if c1 == nil {
+			return errors.InvalidArgumentError("failed to parse EC point for encryption key")
+		}
 		b, err = decryptKeyECDH(priv, c1, c2, e.ecdh_C)
 	default:
 		err = errors.InvalidArgumentError("cannot decrypted encrypted session key with private key of type " + strconv.Itoa(int(priv.PubKeyAlgo)))

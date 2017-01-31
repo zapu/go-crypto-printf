@@ -545,57 +545,6 @@ func mpiPointByteLength(curve elliptic.Curve) int {
 	return (curve.Params().P.BitLen() + 7) / 8
 }
 
-// Like elliptic.Unmarshal or ecdh.Unmarshal but you don't need to
-// know curve beforehand. It will read both uncompressed (0x4) and
-// compressed (0x40) points basing on header.
-func readPointMPI(r io.Reader) (X, Y *parsedMPI, err error) {
-	X = nil
-	Y = nil
-	var buf [2]byte
-	_, err = readFull(r, buf[0:2])
-	if err != nil {
-		return nil, nil, err
-	}
-
-	mpiBitSize := int(buf[0])<<8 | int(buf[1])
-	mpiByteSize := (mpiBitSize + 7) / 8
-	r.Read(buf[:1])
-	header := buf[0]
-	if header == 0x4 {
-		coordLen := (mpiByteSize - 1) / 2
-
-		X = new(parsedMPI)
-		X.bytes = make([]byte, coordLen)
-		X.bitLength = uint16(coordLen * 8)
-		_, err = readFull(r, X.bytes)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		Y = new(parsedMPI)
-		Y.bytes = make([]byte, coordLen)
-		Y.bitLength = uint16(coordLen * 8)
-		_, err = readFull(r, Y.bytes)
-		if err != nil {
-			return nil, nil, err
-		}
-	} else if header == 0x40 {
-		coordLen := mpiByteSize - 1
-		X = new(parsedMPI)
-		X.bytes = make([]byte, coordLen)
-		X.bitLength = uint16(coordLen * 8)
-		_, err = readFull(r, X.bytes)
-		if err != nil {
-			return nil, nil, err
-		}
-	} else {
-		err = errors.StructuralError("Unknown MPI type.")
-		return nil, nil, err
-	}
-
-	return X, Y, nil
-}
-
 // writeBig serializes a *big.Int to w.
 func writeBig(w io.Writer, i *big.Int) error {
 	return writeMPI(w, uint16(i.BitLen()), i.Bytes())
