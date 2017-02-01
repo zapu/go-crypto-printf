@@ -232,11 +232,11 @@ func (e *PrivateKey) DecryptShared(X, Y *big.Int) []byte {
 // 0x40 compressed point for Curve 25519.
 func Marshal(curve elliptic.Curve, x, y *big.Int) []byte {
 	cv, ok := curve25519.ToCurve25519(curve)
-	if !ok {
-		return elliptic.Marshal(curve, x, y)
-	} else {
+	if ok {
 		return cv.MarshalType40(x, y)
 	}
+
+	return elliptic.Marshal(curve, x, y)
 }
 
 // Unmarshal converts point, serialized by Marshal, into x, y pair.
@@ -244,9 +244,9 @@ func Marshal(curve elliptic.Curve, x, y *big.Int) []byte {
 // It is an error if point is not on the curve, On error, x = nil.
 func Unmarshal(curve elliptic.Curve, data []byte) (x, y *big.Int) {
 	cv, ok := curve25519.ToCurve25519(curve)
-	if !ok {
-		return elliptic.Unmarshal(curve, data)
-	} else {
+	if ok {
 		return cv.UnmarshalType40(data)
 	}
+
+	return elliptic.Unmarshal(curve, data)
 }
