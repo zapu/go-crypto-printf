@@ -223,6 +223,26 @@ func (e *PrivateKey) DecryptShared(X, Y *big.Int) []byte {
 	return Sx.Bytes()
 }
 
+func countBits(buffer []byte) int {
+	var headerLen int
+	switch buffer[0] {
+	case 0x4:
+		headerLen = 3
+	case 0x40:
+		headerLen = 7
+	default:
+		// Unexpected header - but we can still count the bits.
+		val := buffer[0]
+		headerLen = 0
+		for val > 0 {
+			val = val / 2
+			headerLen++
+		}
+	}
+
+	return headerLen + (len(buffer)-1)*8
+}
+
 // elliptic.Marshal and elliptic.Unmarshal only marshals uncompressed
 // 0x4 MPI types. These functions will check if the curve is cv25519,
 // and if so, use 0x40 compressed type to (un)marshal. Otherwise,
@@ -230,13 +250,23 @@ func (e *PrivateKey) DecryptShared(X, Y *big.Int) []byte {
 
 // Marshal encodes point into either 0x4 uncompressed point form, or
 // 0x40 compressed point for Curve 25519.
-func Marshal(curve elliptic.Curve, x, y *big.Int) []byte {
+func Marshal(curve elliptic.Curve, x, y *big.Int) (buf []byte, bitSize int) {
+	// NOTE: Read more about MPI encoding in the RFC:
+	// https://tools.ietf.org/html/rfc4880#section-3.2
+
+	// We are required to encode size in bits, counting from the most-
+	// significant non-zero bit. So assuming that the buffer never
+	// starts with 0x00, we only need to count bits in the first byte
+	// - and in current implentation it will always be 0x4 or 0x40.
+
 	cv, ok := curve25519.ToCurve25519(curve)
 	if ok {
-		return cv.MarshalType40(x, y)
+		buf = cv.MarshalType40(x, y)
+	} else {
+		buf = elliptic.Marshal(curve, x, y)
 	}
 
-	return elliptic.Marshal(curve, x, y)
+	return buf, countBits(buf)
 }
 
 // Unmarshal converts point, serialized by Marshal, into x, y pair.

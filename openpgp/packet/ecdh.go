@@ -72,8 +72,7 @@ func serializeEncryptedKeyECDH(w io.Writer, rand io.Reader, header [10]byte, pub
 		return err
 	}
 
-	mpis := ecdh.Marshal(ecdhpub.Curve, Vx, Vy)
-	mpiBitLen := len(mpis) * 8
+	mpis, mpiBitLen := ecdh.Marshal(ecdhpub.Curve, Vx, Vy)
 
 	packetLen := len(header) /* header length in bytes */
 	packetLen += 2 /* mpi length in bits */ + len(mpis)
