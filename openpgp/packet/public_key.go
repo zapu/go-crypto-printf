@@ -68,7 +68,10 @@ func (e *edDSAkey) Verify(payload []byte, r parsedMPI, s parsedMPI) bool {
 	var key [ed25519.PublicKeySize]byte
 	var sig [ed25519.SignatureSize]byte
 
-	// NOTE(maxtaco): I'm not entirely sure why we need to ignore the first byte.
+	// NOTE: The first byte is 0x40 - MPI header
+	// TODO: Maybe clean the code up and use 0x40 as a header when
+	// reading and keep only actual number in p field. Find out how
+	// other MPIs are stored.
 	copy(key[:], e.p.bytes[1:])
 	n := copy(sig[:], r.bytes)
 	copy(sig[n:], s.bytes)
@@ -891,6 +894,14 @@ func (pk *PublicKey) BitLength() (bitLength uint16, err error) {
 		bitLength = pk.p.bitLength
 	case PubKeyAlgoElGamal:
 		bitLength = pk.p.bitLength
+	case PubKeyAlgoEdDSA:
+		// pk.edk.p is not exactly MPI - it includes the 0x40 prefix
+		// there, so does the bitLength. Typically it would be 263,
+		// but also we might a key that did not have exact number of
+		// bit encoded (so 264 instead, for example). Let's count the
+		// number of bytes the actual curve point has and multiply
+		// that by 8.
+		bitLength = uint16(8 * (len(pk.edk.p.bytes) - 1))
 	default:
 		err = errors.InvalidArgumentError("bad public-key algorithm")
 	}
