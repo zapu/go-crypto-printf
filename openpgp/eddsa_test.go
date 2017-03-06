@@ -233,3 +233,33 @@ func TestEd25519ReadMessage(t *testing.T) {
 		t.Errorf("bad plain text got:\"%s\" want:\"%s\"", string(contents), expectedStr)
 	}
 }
+
+
+// Ed25519 primary key with invalid public key P.
+const invalidEddsaKey = `-----BEGIN PGP PRIVATE KEY BLOCK-----
+Version: Keybase OpenPGP v2.0.64
+Comment: https://keybase.io/crypto
+
+xVYEWL3x4RYJKwYBBAHaRw8BAP9ABOCte/b17W09O2FXzJ3ApL98yGx3Utz/w9BR
+W/Y+OAAA+KzCEdea6/S52rXkhPeqbsrB9B/hR+ci6p/cRP2E2B0VdM0ITXIgUm9i
+b3TCdgQTFgoAHgUCWL3x4QIbAwMLCQcDFQoIAh4BAheAAxYCAQIZAQAKCRCu0jNx
+1Gfkf43vAQAcf0EG8F5BfdQK8o/xdv+FR57rdb/qQSJhIyHiiyqtxwEA78jcP0b9
+vX9dDBL4Pu3PzDYdWBfjHp3+TtEXSdGP3w/HXQRYvfHhEgorBgEEAZdVAQUBAQdA
+kUZxgZvlyeoVh8DtEWGyd5Se3R4JBYsiW5wnOAj3oxADAQoJAAEA7tO9vvaqiuX+
+Rzpd8Q4326D4IuEUgpvk5bzNHw8oPYQSbsJnBBgWCgAPBQJYvfHhBQkPCZwAAhsI
+AAoJEK7SM3HUZ+R/AssBAGfCpZmvvMWGrbDvsaS8mh5dqOEctjHskgZDL9aMYJH1
+AQBtPnjMn5ZwaGlDGxDGcO0/1XHhMO6F7BckISRXAqJlDg==
+=FXZ2
+-----END PGP PRIVATE KEY BLOCK-----
+
+
+`
+
+func TestEd25519InvalidKey(t *testing.T) {
+	const expectedStr = "looks like its working"
+
+	_, err := ReadArmoredKeyRing(strings.NewReader(invalidEddsaKey))
+	if err == nil {
+		t.Fatalf("key should not parse")
+	}
+}
