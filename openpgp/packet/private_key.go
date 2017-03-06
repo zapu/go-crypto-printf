@@ -50,9 +50,7 @@ func (e *EdDSAPrivateKey) Sign(digest []byte) (R, S []byte, err error) {
 	sig := ed25519.Sign(secret, digest)
 
 	sigLen := ed25519.SignatureSize / 2
-	R = sig[:sigLen]
-	S = sig[sigLen:]
-	return R, S, nil
+	return sig[:sigLen], sig[sigLen:], nil
 }
 
 func NewRSAPrivateKey(currentTime time.Time, priv *rsa.PrivateKey) *PrivateKey {
