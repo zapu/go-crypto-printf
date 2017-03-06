@@ -3,6 +3,7 @@ package openpgp
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -135,5 +136,100 @@ func TestEd25519VerifyClearSignNoKey(t *testing.T) {
 	err := readKeysAndCheckSig(clearSignPayloadNoKey, t)
 	if err == nil {
 		t.Fatalf("we should not be able to verify this!")
+	}
+}
+
+const ed25519SecretKey2 = `-----BEGIN PGP PRIVATE KEY BLOCK-----
+Version: Keybase OpenPGP v2.0.62
+Comment: https://keybase.io/crypto
+
+xVgEWL2HOBYJKwYBBAHaRw8BAQdAo/2zlJuTrEnuQfJ9lY426d/lmRCj59fW9qsH
+o8cm0sQAAQAc3JJBD/+Gnqbki1lI2yQvKfjxVmNYbyfE00gu4fWrnRDGzQhNciBS
+b2JvdMJ2BBMWCgAeBQJYvYc4AhsDAwsJBwMVCggCHgECF4ADFgIBAhkBAAoJEFJQ
+62zQlkZ7fOYBAE7Nr5FTel2I5iHaQdjp6s4UJz1lteFrdZUE3IVQl5w+AQBrH1fK
+0Na5Llgtc9k5iZTls+GnFd84brwhEOnvRQgGDMddBFi9hzgSCisGAQQBl1UBBQEB
+B0Cs0O+HtIDGHoEODZgtlTyAZRqooN8y9OLWekeU6zIwXwMBCgkAAQBBxWlsZA1v
+deRgZPOs5e+jAJp6KJjZ97C6rxf0lnr4dhI1wmcEGBYKAA8FAli9hzgFCQ8JnAAC
+GwgACgkQUlDrbNCWRntHTAEAYRzOLqzcVRJ+NzSIkf2OIKW+NN+2D0oWNqVKOQ+c
+xZcBAC0hkbCMFNAb+B2iyZgtmsAT9jJOS2c6xnwBnE2UnzIE
+=krA2
+-----END PGP PRIVATE KEY BLOCK-----
+
+`
+
+func TestEd25519SerializeKey(t *testing.T) {
+	// Check if we can export private key, armor it and then re-import.
+	// Exporting requires us to sign identities and subkeys properly.
+	// If either signing or veryfing does not work, re-importing will fail.
+
+	entities, err := ReadArmoredKeyRing(strings.NewReader(ed25519SecretKey2))
+	if err != nil {
+		t.Fatalf("error opening keys: %v", err)
+	}
+
+	var buf bytes.Buffer
+	err = entities[0].SerializePrivate(&buf, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	armored, err := rawToArmored(buf.Bytes(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entities, err = ReadArmoredKeyRing(strings.NewReader(armored))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+const edPgpMessage = `-----BEGIN PGP MESSAGE-----
+Version: Keybase OpenPGP v2.0.62
+Comment: https://keybase.io/crypto
+
+wV4D8QSbkho4bZYSAQdAbraKkqPG11yMGlCAOVmMFCuGkCkMuv9tmkhP/7A77kAw
+JcITivZTs+yPI2IvjVmAZldB4Y2kOJTRxgjZGQq27Ht9kwSAkRPFt+VYvMB55Te8
+0r0BwQnNaqtqw1CgjMMV73JQvTFPu3yAqOvvgTfjPTqc8+tsLO+CQje0bdShaZOL
+EqaxQ3rLnZfIMlKsxww5WNwvoKvQqIg+FoRUAt2rbwlIxYaZYS7+Fy6XES2zUMjU
+XMEpuopz7NmP2SkVC3t+tFUpf6LZPDGHNyN8ipkTaOTYOPXGwnHxx/v6A+Mqem8c
+RsjkLnDJvlLkWvcwC0Hotet7AHO09IMVnYlBCAM/bVXeCGaHy5OOEVai7g7Q8zM=
+=TeLt
+-----END PGP MESSAGE-----
+
+`
+
+func TestEd25519ReadMessage(t *testing.T) {
+	const expectedStr = "looks like its working"
+
+	entities, err := ReadArmoredKeyRing(strings.NewReader(ed25519SecretKey2))
+	if err != nil {
+		t.Fatalf("error opening keys: %v", err)
+	}
+
+	block, err := armor.Decode(bytes.NewBufferString(edPgpMessage))
+	if err != nil {
+		t.Fatalf("error decoding resulting armor: %v", err)
+	}
+	md, err := ReadMessage(block.Body, entities, nil, nil)
+	if err != nil {
+		t.Fatalf("error in ReadMessage: %v", err)
+	}
+
+	if !md.IsSigned {
+		t.Fatalf("message should have been signed")
+	}
+
+	if md.SignedBy.PrivateKey != entities[0].PrivateKey {
+		t.Fatalf("SignedBy is not our key")
+	}
+
+	if md.DecryptedWith.PrivateKey != entities[0].Subkeys[0].PrivateKey {
+		t.Fatalf("DecryptedWith is not our key")
+	}
+
+	contents, err := ioutil.ReadAll(md.UnverifiedBody)
+	if string(contents) != expectedStr {
+		t.Errorf("bad plain text got:\"%s\" want:\"%s\"", string(contents), expectedStr)
 	}
 }
