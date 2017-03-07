@@ -21,9 +21,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/agl/ed25519"
 	"github.com/keybase/go-crypto/brainpool"
 	"github.com/keybase/go-crypto/curve25519"
+	"github.com/keybase/go-crypto/ed25519"
 	"github.com/keybase/go-crypto/openpgp/ecdh"
 	"github.com/keybase/go-crypto/openpgp/elgamal"
 	"github.com/keybase/go-crypto/openpgp/errors"
@@ -65,18 +65,17 @@ type edDSAkey struct {
 }
 
 func (e *edDSAkey) Verify(payload []byte, r parsedMPI, s parsedMPI) bool {
-	var key [ed25519.PublicKeySize]byte
 	var sig [ed25519.SignatureSize]byte
 
 	// NOTE: The first byte is 0x40 - MPI header
 	// TODO: Maybe clean the code up and use 0x40 as a header when
 	// reading and keep only actual number in p field. Find out how
 	// other MPIs are stored.
-	copy(key[:], e.p.bytes[1:])
+	key := e.p.bytes[1:]
 	n := copy(sig[:], r.bytes)
 	copy(sig[n:], s.bytes)
 
-	return ed25519.Verify(&key, payload, &sig)
+	return ed25519.Verify(key, payload, sig[:])
 }
 
 // parseOID reads the OID for the curve as defined in RFC 6637, Section 9.
@@ -100,7 +99,7 @@ func (f *ecdsaKey) parse(r io.Reader) (err error) {
 		return err
 	}
 	f.p.bytes, f.p.bitLength, err = readMPI(r)
-	return
+	return err
 }
 
 func (f *ecdsaKey) serialize(w io.Writer) (err error) {
@@ -289,6 +288,9 @@ func NewDSAPublicKey(creationTime time.Time, pub *dsa.PublicKey) *PublicKey {
 func (e *edDSAkey) check() error {
 	if !bytes.Equal(e.oid, oidEdDSA) {
 		return errors.UnsupportedError(fmt.Sprintf("Bad OID for EdDSA key: %v", e.oid))
+	}
+	if bLen := len(e.p.bytes); bLen != 33 { // 32 bytes for ed25519 key and 1 byte for 0x40 header
+		return errors.UnsupportedError(fmt.Sprintf("Unexpected EdDSA public key length: %d", bLen))
 	}
 	return nil
 }
