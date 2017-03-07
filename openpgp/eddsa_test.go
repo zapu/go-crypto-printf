@@ -234,31 +234,53 @@ func TestEd25519ReadMessage(t *testing.T) {
 	}
 }
 
-
 // Ed25519 primary key with invalid public key P.
 const invalidEddsaKey = `-----BEGIN PGP PRIVATE KEY BLOCK-----
 Version: Keybase OpenPGP v2.0.64
 Comment: https://keybase.io/crypto
 
-xVYEWL3x4RYJKwYBBAHaRw8BAP9ABOCte/b17W09O2FXzJ3ApL98yGx3Utz/w9BR
-W/Y+OAAA+KzCEdea6/S52rXkhPeqbsrB9B/hR+ci6p/cRP2E2B0VdM0ITXIgUm9i
-b3TCdgQTFgoAHgUCWL3x4QIbAwMLCQcDFQoIAh4BAheAAxYCAQIZAQAKCRCu0jNx
-1Gfkf43vAQAcf0EG8F5BfdQK8o/xdv+FR57rdb/qQSJhIyHiiyqtxwEA78jcP0b9
-vX9dDBL4Pu3PzDYdWBfjHp3+TtEXSdGP3w/HXQRYvfHhEgorBgEEAZdVAQUBAQdA
-kUZxgZvlyeoVh8DtEWGyd5Se3R4JBYsiW5wnOAj3oxADAQoJAAEA7tO9vvaqiuX+
-Rzpd8Q4326D4IuEUgpvk5bzNHw8oPYQSbsJnBBgWCgAPBQJYvfHhBQkPCZwAAhsI
-AAoJEK7SM3HUZ+R/AssBAGfCpZmvvMWGrbDvsaS8mh5dqOEctjHskgZDL9aMYJH1
-AQBtPnjMn5ZwaGlDGxDGcO0/1XHhMO6F7BckISRXAqJlDg==
-=FXZ2
+xVcEWL66QxYJKwYBBAHaRw8BAP9AxKu8stVAKQFSmqFS9Ix3XfRZnuZiFfNfduJy
+lgrt8AABAJ/s+wHmKnN4iTlrk8afUnOdznirfbZslbAWvklnySiBENXNCE1yIFJv
+Ym90wnYEExYKAB4FAli+ukMCGwMDCwkHAxUKCAIeAQIXgAMWAgECGQEACgkQBMA5
+Uo2Ksvy4uwEAofpazp4hZKl9getVyv9ohWNCsJO5SVhLlWIeUgudz/MBAKDf1Ul4
+03ghKYQrp8BBtSZgkRywS1CzIsPM+TKOxxUAx10EWL66QxIKKwYBBAGXVQEFAQEH
+QKf3w8hdmDeN4Nwx0shYse7/RokTcGJa9P119ZzbwYcMAwEKCQABABTL6gnhVNdb
+gBCcJ9PMS6b2Am8iPmt68FvsYGWiT8/XEFzCZwQYFgoADwUCWL66QwUJDwmcAAIb
+CAAKCRAEwDlSjYqy/Nh9AQB5/qReBLkVsPOdyGLLH2xhuSvEqc2BoIsbBLaxjSDO
+4gEAw4bB8qGi8FTdXTCfL3C2cb893Rr5MOzbuBFIyOUJqgs=
+=CUjI
 -----END PGP PRIVATE KEY BLOCK-----
-
 
 `
 
-func TestEd25519InvalidKey(t *testing.T) {
+// Ed25519 primary key with invalid (30-byte) private key seed.
+const invalidEddsaKey2 = `-----BEGIN PGP PRIVATE KEY BLOCK-----
+Version: Keybase OpenPGP v2.0.64
+Comment: https://keybase.io/crypto
+
+xVYEWL7DEBYJKwYBBAHaRw8BAQdAxwd4z4dCXJe4iQfDvPlAOPQ0RBRu7sU9yib1
+ovjrC3AAAPDO28O0PDSOrfeS+1ZtUUAwpsSd0OoDFORz3y+4t/QSY80ITXIgUm9i
+b3TCdgQTFgoAHgUCWL7DEAIbAwMLCQcDFQoIAh4BAheAAxYCAQIZAQAKCRAqJY4s
+j028sOBTAQAlBHmc4n7Gp4Oggg/t8bFNFUYROaacCq0wBDYiTUI/5wEA/oQ+y6UG
+TlPrwBB1eN9n16To5TtfuRL1ULxGIy971ADHXQRYvsMQEgorBgEEAZdVAQUBAQdA
+5p3gCAuHatK1qwSgbwZ1rdXocP+WmHGiZIjxlkDVhg0DAQoJAAEAbPQnac6koq2z
+/UHAprfr0x1rdMi83fUBIFkpfg4m1wsRB8JnBBgWCgAPBQJYvsMQBQkPCZwAAhsI
+AAoJEColjiyPTbywv+4BAIa4FCGRZmMZpIW88a0wU0jV6cCw4FVCJSBRzPrN4pz9
+AQCR7HWES/PlR1gh33cgHCaCgaVt7TajaSCsj2VmC4StAA==
+=jAMh
+-----END PGP PRIVATE KEY BLOCK-----
+
+`
+
+func TestEd25519InvalidKeys(t *testing.T) {
 	const expectedStr = "looks like its working"
 
 	_, err := ReadArmoredKeyRing(strings.NewReader(invalidEddsaKey))
+	if err == nil {
+		t.Fatalf("key should not parse")
+	}
+
+	_, err = ReadArmoredKeyRing(strings.NewReader(invalidEddsaKey2))
 	if err == nil {
 		t.Fatalf("key should not parse")
 	}

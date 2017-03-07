@@ -99,7 +99,7 @@ func (f *ecdsaKey) parse(r io.Reader) (err error) {
 		return err
 	}
 	f.p.bytes, f.p.bitLength, err = readMPI(r)
-	return
+	return err
 }
 
 func (f *ecdsaKey) serialize(w io.Writer) (err error) {
@@ -288,6 +288,9 @@ func NewDSAPublicKey(creationTime time.Time, pub *dsa.PublicKey) *PublicKey {
 func (e *edDSAkey) check() error {
 	if !bytes.Equal(e.oid, oidEdDSA) {
 		return errors.UnsupportedError(fmt.Sprintf("Bad OID for EdDSA key: %v", e.oid))
+	}
+	if bLen := len(e.p.bytes); bLen != 33 { // 32 bytes for ed25519 key and 1 byte for 0x40 header
+		return errors.UnsupportedError(fmt.Sprintf("Unexpected EdDSA public key length: %d", bLen))
 	}
 	return nil
 }

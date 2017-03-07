@@ -10,6 +10,7 @@ import (
 	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/sha1"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -444,7 +445,11 @@ func (pk *PrivateKey) parseEdDSAPrivateKey(data []byte) (err error) {
 	buf := bytes.NewBuffer(data)
 	eddsaPriv.seed.bytes, eddsaPriv.seed.bitLength, err = readMPI(buf)
 	if err != nil {
-		return
+		return err
+	}
+
+	if bLen := len(eddsaPriv.seed.bytes); bLen != 32 { // 32 bytes private part of ed25519 key.
+		return errors.UnsupportedError(fmt.Sprintf("Unexpected EdDSA private key length: %d", bLen))
 	}
 
 	pk.PrivateKey = eddsaPriv
