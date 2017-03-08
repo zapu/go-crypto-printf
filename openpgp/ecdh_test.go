@@ -232,6 +232,30 @@ func TestInvalidEddsaSignatureImport(t *testing.T) {
 	}
 }
 
+func TestECDHBitLengths(t *testing.T) {
+	readAndGetBitLength := func(armored string) (uint16) {
+		entities, err := ReadArmoredKeyRing(strings.NewReader(armored))
+		if err  != nil {
+			t.Fatalf("Error in ReadArmoredKeyRing: %v", err)
+		}
+		bitLen, err := entities[0].PrimaryKey.BitLength()
+		if err != nil {
+			t.Fatalf("Error in BitLength(): %v", err)
+		}
+		return bitLen
+	}
+
+	if bLen := readAndGetBitLength(privKey521); bLen != 521 {
+		t.Fatalf("Got BitLength %d, expected 521", bLen)
+	}
+	if bLen := readAndGetBitLength(privKey384); bLen != 384 {
+		t.Fatalf("Got BitLength %d, expected 384", bLen)
+	}
+	if bLen := readAndGetBitLength(privKeyCv25519); bLen != 256 {
+		t.Fatalf("Got BitLength %d, expected 256", bLen)
+	}
+}
+
 const privKey521 = `-----BEGIN PGP PRIVATE KEY BLOCK-----
 
 lNkEWAJ/HhMFK4EEACMEIwQBX1achVr3ad6/1AYQM0Xpb0yOch0Va2+d1WjAi/TU

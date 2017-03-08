@@ -64,6 +64,17 @@ func TestEd25519RoundTrip(t *testing.T) {
 	}
 }
 
+func TestEd25519BitLength(t *testing.T) {
+	entities, _ := ReadArmoredKeyRing(strings.NewReader(ed25519SecretKey))
+	bitLen, err := entities[0].PrimaryKey.BitLength()
+	if err != nil {
+		t.Fatalf("error in BitLength(): %v", err)
+	}
+	if bitLen != 256 {
+		t.Fatalf("Got BitLength %v expected 256", bitLen)
+	}
+}
+
 // Clearsigned message for key that we own.
 const clearSignPayload = `-----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA256
