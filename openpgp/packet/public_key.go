@@ -887,7 +887,9 @@ func writeMPIs(w io.Writer, mpis ...parsedMPI) (err error) {
 	return
 }
 
-// BitLength returns the bit length for the given public key.
+// BitLength returns the bit length for the given public key. Used for
+// displaying key information, actual buffers and BigInts inside may
+// have non-matching different size if the key is invalid.
 func (pk *PublicKey) BitLength() (bitLength uint16, err error) {
 	switch pk.PubKeyAlgo {
 	case PubKeyAlgoRSA, PubKeyAlgoRSAEncryptOnly, PubKeyAlgoRSASignOnly:
@@ -896,14 +898,17 @@ func (pk *PublicKey) BitLength() (bitLength uint16, err error) {
 		bitLength = pk.p.bitLength
 	case PubKeyAlgoElGamal:
 		bitLength = pk.p.bitLength
+	case PubKeyAlgoECDH:
+		ecdhPublicKey := pk.PublicKey.(*ecdh.PublicKey)
+		bitLength = uint16(ecdhPublicKey.Curve.Params().BitSize)
+	case PubKeyAlgoECDSA:
+		ecdsaPublicKey := pk.PublicKey.(*ecdsa.PublicKey)
+		bitLength = uint16(ecdsaPublicKey.Curve.Params().BitSize)
 	case PubKeyAlgoEdDSA:
-		// pk.edk.p is not exactly MPI - it includes the 0x40 prefix
-		// there, so does the bitLength. Typically it would be 263,
-		// but also we might a key that did not have exact number of
-		// bit encoded (so 264 instead, for example). Let's count the
-		// number of bytes the actual curve point has and multiply
-		// that by 8.
-		bitLength = uint16(8 * (len(pk.edk.p.bytes) - 1))
+		// EdDSA only support ed25519 curves right now, just return
+		// the length. Also, we don't have any PublicKey.Curve object
+		// to look the size up from.
+		bitLength = 256
 	default:
 		err = errors.InvalidArgumentError("bad public-key algorithm")
 	}
