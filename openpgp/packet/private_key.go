@@ -44,11 +44,17 @@ type EdDSAPrivateKey struct {
 }
 
 func (e *EdDSAPrivateKey) Sign(digest []byte) (R, S []byte, err error) {
-	secret := make([]byte, ed25519.PrivateKeySize)
-	copy(secret[:32], e.seed.bytes)
-	copy(secret[32:], e.PublicKey.edk.p.bytes[1:]) // [1:] because [0] is 0x40 mpi header
+	r := bytes.NewReader(e.seed.bytes)
+	publicKey, privateKey, err := ed25519.GenerateKey(r)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	sig := ed25519.Sign(secret, digest)
+	if !bytes.Equal(publicKey, e.PublicKey.edk.p.bytes[1:]) { // [1:] because [0] is 0x40 mpi header
+		return nil, nil, errors.UnsupportedError("EdDSA: Private key does not match public key.")
+	}
+
+	sig := ed25519.Sign(privateKey, digest)
 
 	sigLen := ed25519.SignatureSize / 2
 	return sig[:sigLen], sig[sigLen:], nil
