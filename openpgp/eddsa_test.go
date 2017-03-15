@@ -39,6 +39,9 @@ func TestEd25519RoundTrip(t *testing.T) {
 	}
 	buf := new(bytes.Buffer)
 	err = ArmoredDetachSign(buf, entities[0], bytes.NewBufferString(testString), nil)
+	if err != nil {
+		t.Fatalf("ArmoredDetachSign fail: %v", err)
+	}
 
 	block, err := armor.Decode(buf)
 	if err != nil {
@@ -294,5 +297,42 @@ func TestEd25519InvalidKeys(t *testing.T) {
 	_, err = ReadArmoredKeyRing(strings.NewReader(invalidEddsaKey2))
 	if err == nil {
 		t.Fatalf("key should not parse")
+	}
+}
+
+// Ed25519 primary key with two userids, the second one has malformed
+// signature - S is 31-byte length instead of 32.
+
+const malformedEddsaKey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: Keybase OpenPGP v2.0.65
+Comment: Second userid has invalid signature (S shorter by 1 byte).
+
+xjMEWMe+KxYJKwYBBAHaRw8BAQdACovM/A9hqvpSk6ye0Dic/qhIXnACG7TvZ7Fm
+KQoLcizNGU1yIFRlc3QgPHRlc3RAa2V5YmFzZS5pbz7CdgQTFgoAHgUCWMe+KwIb
+LwMLCQcDFQoIAh4BAheAAxYCAQIZAQAKCRAk7Ki+jWkPk38dAQAA1YGs4U8erWBd
+/zuMACKX9dJbEaMpYknQpqvxYrkPvwEANOskGrr3G/kWUkIrjKnbjvwbDPifwa5V
+A73D7La5QQ7NG01yIFRlc3QgMiA8dGVzdEBrZXliYXNlLmlvPsJyBBMWCgAbBQJY
+x74rAhsvAwsJBwMVCggCHgECF4ADFgIBAAoJECTsqL6NaQ+T0TEBAMGoORS2uUF7
+kGOZKibkwoGC8irPGmBzN6tAf+ravK+HAPg7A3NA+Yqr+aTzl2xSXqIAOb2fJjIA
+AC0Xg++AATao
+=uJ/2
+-----END PGP PUBLIC KEY BLOCK-----`
+
+func TestEd25519Malformed(t *testing.T) {
+	entities, err := ReadArmoredKeyRing(strings.NewReader(malformedEddsaKey))
+	if err != nil {
+		t.Fatalf("error opening keys: %v", err)
+	}
+	if len(entities) != 1 {
+		t.Fatal("expected only 1 key")
+	}
+
+	entity := entities[0]
+	if len(entity.Identities) != 1 {
+		t.Fatalf("Expected one identity.")
+	}
+
+	if _, ok := entity.Identities["Mr Test <test@keybase.io>"]; !ok {
+		t.Fatalf("Did not find userid we expected to find.")
 	}
 }
