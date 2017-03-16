@@ -5,8 +5,15 @@
 package packet
 
 import (
+	"bytes"
+	"crypto/rand"
+	"encoding/hex"
+	"math/big"
 	"testing"
 	"time"
+
+	"github.com/keybase/go-crypto/openpgp/elgamal"
+	"github.com/keybase/go-crypto/rsa"
 )
 
 var privateKeyTests = []struct {
@@ -22,6 +29,8 @@ var privateKeyTests = []struct {
 		time.Unix(0x4df9ee1a, 0),
 	},
 }
+
+var message = []byte("This is a test")
 
 func TestPrivateKeyRead(t *testing.T) {
 	for i, test := range privateKeyTests {
@@ -52,6 +61,77 @@ func TestPrivateKeyRead(t *testing.T) {
 
 		if !privKey.CreationTime.Equal(test.creationTime) || privKey.Encrypted {
 			t.Errorf("#%d: bad result, got: %#v", i, privKey)
+		}
+	}
+}
+
+func TestPrivateKeyEncrypt(t *testing.T) {
+	var encryptedMsg, decryptedMsg []byte
+	var encryptedC1, encryptedC2 *big.Int
+
+	for i, test := range privateKeyTests {
+		packet, err := Read(readerFromHex(test.privateKeyHex))
+		if err != nil {
+			t.Errorf("#%d: failed to parse: %s", i, err)
+			continue
+		}
+		privKey := packet.(*PrivateKey)
+		err = privKey.Decrypt([]byte("testing"))
+		if err != nil {
+			t.Errorf("#%d: failed to decrypt: %s", i, err)
+			continue
+		}
+
+		switch pubKey := privKey.PublicKey.PublicKey.(type) {
+		case *rsa.PublicKey:
+			encryptedMsg, err = rsa.EncryptPKCS1v15(rand.Reader, pubKey, message)
+			if err != nil {
+				t.Errorf("#%d: failed to encrypt message: %s", i, err)
+				continue
+			}
+		case *elgamal.PublicKey:
+			encryptedC1, encryptedC2, err = elgamal.Encrypt(rand.Reader, pubKey, message)
+			if err != nil {
+				t.Errorf("#%d: failed to encrypt message: %s", i, err)
+				continue
+			}
+		}
+
+		outbuf := bytes.NewBuffer(nil)
+		privKey.Encrypt([]byte("testingagain"), nil)
+		err = privKey.Serialize(outbuf)
+		if err != nil {
+			t.Errorf("#%d: failed to serialize: %s", i, err)
+			continue
+		}
+		newHex := hex.EncodeToString(outbuf.Bytes())
+		packet2, err2 := Read(readerFromHex(newHex))
+		if err2 != nil {
+			t.Errorf("#%d: failed to parse: %s", i, err2)
+		}
+		pKey := packet2.(*PrivateKey)
+		err2 = pKey.Decrypt([]byte("testingagain"))
+		if err2 != nil {
+			t.Errorf("#%d: failed to decrypt: %s", i, err2)
+			continue
+		}
+
+		switch prvKey := pKey.PrivateKey.(type) {
+		case *rsa.PrivateKey:
+			decryptedMsg, err = rsa.DecryptPKCS1v15(rand.Reader, prvKey, encryptedMsg)
+			if err != nil {
+				t.Errorf("#%d: failed to decrypt message: %s", i, err)
+				continue
+			}
+		case *elgamal.PrivateKey:
+			decryptedMsg, err = elgamal.Decrypt(prvKey, encryptedC1, encryptedC2)
+			if err != nil {
+				t.Error("#%d: failed to decrypt message: %s", i, err)
+			}
+		}
+		if !bytes.Equal(decryptedMsg, message) {
+			t.Errorf("#%d: decrypted message does not equal original", i)
+			continue
 		}
 	}
 }
