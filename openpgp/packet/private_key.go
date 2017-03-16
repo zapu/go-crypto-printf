@@ -177,8 +177,8 @@ func (pk *PrivateKey) Encrypt(passphrase []byte, config *Config) (err error) {
 	pk.sha1Checksum = true
 	pk.cipher = config.Cipher()
 	s2kConfig := s2k.Config{
-		config.Hash(),
-		0,
+		Hash: config.Hash(),
+		S2KCount: 0,
 	}
 	s2kBuf := bytes.NewBuffer(nil)
 	derivedKey := make([]byte, pk.cipher.KeySize())
