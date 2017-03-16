@@ -162,13 +162,17 @@ func mod64kHash(d []byte) uint16 {
 	return h
 }
 
-// This is the counterpart to the Decrypt() method below
-// @param passphase is the passphrase used to generate the derived-key based
-//        on the Iterated S2K method [Required]
-// @param config the packet.Config for setting encryption algorithm and hash
-//        algorithm. If it is nil, then the standard default will be used.
-// The typical usage is to call Encrypt() on an unprotected PrivateKey. Then
-// when Serialize() is called, the encryptedData member will be serialized
+// This is the counterpart to the Decrypt() method below.
+// If config is nil, then the standard, and sensible, defaults apply.
+// The typical usage is to call Encrypt() on a PrivateKey. An encryption
+// key will be derived from the given passphrase using S2K Specifier
+// Type 3 (Iterated + Salted, see RFC-4880 Sec. 3.7.1.3). This choice
+// is hardcoded in s2k.Serialize(). S2KCount is hardcoded to 0, which is
+// equivalent to 65536. And the hash algorithm for key-derivation can be
+// set with config. The encrypted PrivateKey, using the algorithm specified
+// in config (if provided), is written out to the encryptedData member.
+// When Serialize() is called, this encryptedData member will be
+// serialized, using S2K Usage value of 254, and thus SHA1 checksum.
 func (pk *PrivateKey) Encrypt(passphrase []byte, config *Config) (err error) {
 	if pk.PrivateKey == nil {
 		return errors.InvalidArgumentError("there is no private key to encrypt")
