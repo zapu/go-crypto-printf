@@ -792,6 +792,89 @@ func TestMultipleSigSubkey(t *testing.T) {
 	}
 }
 
+func TestMessageEncryptionRoundtripWithPassphraseChange(t *testing.T) {
+	el, err := ReadKeyRing(readerFromHex(testKeys1And2PrivateHex))
+	if len(el) != 2 {
+		t.Fatal("failed to load the keyring")
+	}
+	// This is the encryption key used in previous test TestSignedEncryptedMessage()
+	// If that pass, we know the message can be decrypted by this private key
+	keys := el.KeysById(0x2a67d68660df41c7, nil)
+	if len(keys) != 1 {
+		t.Fatalf("%d keys found with ID 0x2a67d68660df41c7", len(keys))
+	}
+
+	// Re-encrypt the Entity
+	entity := keys[0].Entity
+	oldPasswd := []byte("passphrase")
+	newPasswd := []byte("123456")
+	if entity.PrivateKey.Encrypted {
+		if err = entity.PrivateKey.Decrypt(oldPasswd); err != nil {
+			t.Fatalf("failed to decrypt primary private key: %s", err)
+		}
+		if err = entity.PrivateKey.Encrypt(newPasswd, nil); err != nil {
+			t.Fatalf("failed to encrypt primary private key: %s", err)
+		}
+	}
+
+	for _, sk := range entity.Subkeys {
+		if !sk.PrivateKey.Encrypted {
+			continue
+		}
+		if err = sk.PrivateKey.Decrypt(oldPasswd); err != nil {
+			t.Fatalf("failed to decrypt subkey 0x%x: %s", sk.PublicKey.KeyId, err)
+		}
+		if err = sk.PrivateKey.Encrypt(newPasswd, nil); err != nil {
+			t.Fatalf("failed to encrypt subkey 0x%x: %s", sk.PublicKey.KeyId, err)
+		}
+	}
+
+	// Re-serialize the re-encrypted Entity
+	keyBuf := bytes.NewBuffer(nil)
+	if err = entity.SerializePrivate(keyBuf, nil); err != nil {
+		t.Fatalf("failed to serialize primary key: %s", err)
+	}
+
+	var kring EntityList
+	if kring, err = ReadKeyRing(keyBuf); err != nil {
+		t.Fatalf("failed to load new key ring: %s", err)
+	}
+	prompt := func(keys []Key, symmetric bool) ([]byte, error) {
+		if symmetric {
+			t.Error("prompt: message was marked as symmetrically encrypted")
+			return nil, errors.ErrKeyIncorrect
+		}
+
+		if len(keys) == 0 {
+			t.Error("prompt: no key presented")
+			return nil, errors.ErrKeyIncorrect
+		}
+
+		err := keys[0].PrivateKey.Decrypt(newPasswd)
+		if err != nil {
+			t.Errorf("prompt: private key decryption failed: %s", err)
+			return nil, errors.ErrKeyIncorrect
+		}
+
+		return nil, nil
+	}
+
+	encryptedMsgReader := readerFromHex(signedEncryptedMessageHex)
+	var msgD *MessageDetails
+	if msgD, err = ReadMessage(encryptedMsgReader, kring, prompt, nil); err != nil {
+		t.Fatalf("failed to read encrypted message: %s", err)
+	}
+
+	var content []byte
+	if content, err = ioutil.ReadAll(msgD.UnverifiedBody); err != nil {
+		t.Fatalf("failed to read body: %s", err)
+	}
+	expected := []byte("Signed and encrypted message\n")
+	if !bytes.Equal(expected, content) {
+		t.Fatalf("message mismatch")
+	}
+}
+
 const testKey1KeyId = 0xA34D7E18C20C31BB
 const testKey3KeyId = 0x338934250CCC0360
 
