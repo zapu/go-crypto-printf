@@ -162,10 +162,11 @@ func mod64kHash(d []byte) uint16 {
 	return h
 }
 
-// This is the counterpart to the Decrypt() method below.
-// If config is nil, then the standard, and sensible, defaults apply.
-// The typical usage is to call Encrypt() on a PrivateKey. An encryption
-// key will be derived from the given passphrase using S2K Specifier
+// Encrypt is the counterpart to the Decrypt() method below. It encrypts
+// the private key with the provided passphrase. If config is nil, then
+// the standard, and sensible, defaults apply.
+//
+// A key will be derived from the given passphrase using S2K Specifier
 // Type 3 (Iterated + Salted, see RFC-4880 Sec. 3.7.1.3). This choice
 // is hardcoded in s2k.Serialize(). S2KCount is hardcoded to 0, which is
 // equivalent to 65536. And the hash algorithm for key-derivation can be
@@ -181,7 +182,7 @@ func (pk *PrivateKey) Encrypt(passphrase []byte, config *Config) (err error) {
 	pk.sha1Checksum = true
 	pk.cipher = config.Cipher()
 	s2kConfig := s2k.Config{
-		Hash: config.Hash(),
+		Hash:     config.Hash(),
 		S2KCount: 0,
 	}
 	s2kBuf := bytes.NewBuffer(nil)
@@ -217,7 +218,6 @@ func (pk *PrivateKey) Encrypt(passphrase []byte, config *Config) (err error) {
 }
 
 func (pk *PrivateKey) Serialize(w io.Writer) (err error) {
-	// TODO(agl): support encrypted private keys
 	buf := bytes.NewBuffer(nil)
 	err = pk.PublicKey.serializeWithoutHeaders(buf)
 	if err != nil {
