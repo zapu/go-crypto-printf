@@ -508,6 +508,26 @@ func (sig *Signature) KeyExpired(currentTime time.Time) bool {
 	return currentTime.After(expiry)
 }
 
+// ExpiresBeforeOther checks if other signature has expiration at
+// later date than sig.
+func (sig *Signature) ExpiresBeforeOther(other *Signature) bool {
+	if sig.KeyLifetimeSecs == nil {
+		// This sig never expires, or has infinitely long expiration
+		// time.
+		return false
+	} else if other.KeyLifetimeSecs == nil {
+		// This sig expires at some non-infinite point, but the other
+		// sig never expires.
+		return true
+	}
+
+	getExpiryDate := func(s *Signature) time.Time {
+		return s.CreationTime.Add(time.Duration(*s.KeyLifetimeSecs) * time.Second)
+	}
+
+	return getExpiryDate(other).After(getExpiryDate(sig))
+}
+
 // buildHashSuffix constructs the HashSuffix member of sig in preparation for signing.
 func (sig *Signature) buildHashSuffix() (err error) {
 	hashedSubpacketsLen := subpacketsLength(sig.outSubpackets, true)

@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/keybase/go-crypto/openpgp/errors"
@@ -774,6 +775,21 @@ func TestSignWithRevokedSubkeyOfflineMaster(t *testing.T) {
 
 func TestSignWithRevokedSubkey(t *testing.T) {
 	testSignWithRevokedSubkey(t, keyWithRevokedSubkeysPrivate, keyWithRevokedSubkeysPublic, keyWithRevokedSubkeyPassphrase)
+}
+
+func TestMultipleSigSubkey(t *testing.T) {
+	el, err := ReadArmoredKeyRing(bytes.NewBufferString(matthiasuKey))
+	if err != nil || len(el) != 1 {
+		t.Fatalf("Failed to read key: %v", err)
+	}
+	entity := el[0]
+	if len(entity.Subkeys) != 1 {
+		t.Fatal("Expected one subkey")
+	}
+	time1, _ := time.Parse("2006-01-02", "2017-03-21")
+	if entity.Subkeys[0].Sig.KeyExpired(time1) {
+		t.Fatal("Expected subkey not to be expired")
+	}
 }
 
 const testKey1KeyId = 0xA34D7E18C20C31BB
@@ -2482,3 +2498,25 @@ bTAxUyiEoSDrzDIl0acsxwEni6R0yS5Byhkc5FAigk5yUarAO5Vqef32aVUwpd5J
 P3n505+feukt+gPf/gF6
 =oTR6
 -----END PGP MESSAGE-----`
+
+// Minimal repro for a key that had an encryption subkey which had two
+// signatures, the first one was expired and the second one was valid.
+// Correct behavior is to find the 'valid' signature even if it's not
+// first. Related to https://github.com/keybase/keybase-issues/issues/2604
+const matthiasuKey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: Keybase OpenPGP v2.0.66
+Comment: https://keybase.io/crypto
+
+xjMEWNDnWhYJKwYBBAHaRw8BAQdA8PVaNyG9OcHWwknOwFQ83rX/UioADnQCXEnb
+a6zJU5nNGU1yIFRlc3QgPHRlc3RAa2V5YmFzZS5pbz7CdgQTFgoAHgUCWNDnWgIb
+AwMLCQcDFQoIAh4BAheAAxYCAQIZAQAKCRBuzc94y89AjJuZAQBRT8F4KD+VxuBk
+a5o4CiNpNbkDzUbq/H1o5Q/pbGPBjwEAwTvy+PN2lOCEbiGg1tEVdbVzR+xuPXAi
+sppnFBlc/AvOOARY0OdaEgorBgEEAZdVAQUBAQdAqJuojJywPAdEYL0fGWsT8ZYk
+vCeffralNVsbBIm+zWADAQoJwmcEGBYKAA8FAjo1aoAFCQ8JnAACGwgACgkQbs3P
+eMvPQIx8PAEAeLkAm3PAty0++zEpC4RoppEjxdfYymxzvIYAcwlCs/YBAI94Qzpj
+XA/h4QtRlXR4EfX/43opwPYnT/WzImlXzYYJwmcEGBYKAA8FAljQ51oFCQ8JnAAC
+GwgACgkQbs3PeMvPQIwf4QEAFfAR5rdFl2bj2UqhW7S2UL7eb7sgdibqXU/a66hL
+HMgBAPaACKEEt5+mQvLioH2wDPn2Wm2oPd+7XeuGB+ex8JwD
+=vkDo
+-----END PGP PUBLIC KEY BLOCK-----
+`
