@@ -80,12 +80,15 @@ func TestPrivateKeyEncrypt(t *testing.T) {
 		}
 
 		privKey := packet.(*PrivateKey)
-		if err = privKey.Decrypt(oldPassphrase); err != nil {
+		if err = privKey.Decrypt(oldPassphrase); err != nil || privKey.Encrypted {
 			t.Errorf("#%d: failed to decrypt: %s", i, err)
 			continue
 		}
 
-		privKey.Encrypt(newPassphrase, nil)
+		if err = privKey.Encrypt(newPassphrase, nil); err != nil || !privKey.Encrypted {
+			t.Errorf("#%d: failed to encrypt: %s", i, err)
+			continue
+		}
 		privKeyBuf := bytes.NewBuffer(nil)
 		if err = privKey.Serialize(privKeyBuf); err != nil {
 			t.Errorf("#%d: failed to serialize: %s", i, err)
@@ -99,11 +102,11 @@ func TestPrivateKeyEncrypt(t *testing.T) {
 		}
 
 		pKey2 := packet2.(*PrivateKey)
-		if err = pKey2.Decrypt(oldPassphrase); err == nil {
+		if err = pKey2.Decrypt(oldPassphrase); err == nil && !pKey2.Encrypted {
 			t.Errorf("#%d: decrypted with the old passphrase!", i)
 			continue
 		}
-		if err = pKey2.Decrypt(newPassphrase); err != nil {
+		if err = pKey2.Decrypt(newPassphrase); err != nil || pKey2.Encrypted {
 			t.Errorf("#%d: failed to decrypt with new passphrase: %s", i, err)
 			continue
 		}
@@ -119,11 +122,11 @@ func TestPrivateKeyReadAndSerailze(t *testing.T) {
 		}
 
 		privKey := packet.(*PrivateKey)
-		if err = privKey.Decrypt(oldPassphrase); err != nil {
-			t.Errorf("#%d: failed to decrypt private key: %s", i, err)
+		if err = privKey.Decrypt(oldPassphrase); err != nil || privKey.Encrypted {
+			t.Errorf("#%d: failed to decrypt: %s", i, err)
 			continue
 		}
-		t.Logf("#%d: privKey=%#v", i, privKey)
+
 		outBuf := bytes.NewBuffer(nil)
 		if err = privKey.Serialize(outBuf); err != nil {
 			t.Errorf("#%d: failed to serialize: %s", i, err)
@@ -140,6 +143,31 @@ func TestPrivateKeyReadAndSerailze(t *testing.T) {
 		privKey2 := packet2.(*PrivateKey)
 		if privKey2.Encrypted {
 			t.Errorf("#%d: privKey2 should not be encrypted", i)
+		}
+	}
+}
+
+// This is to ensure that immediately after calling Encrypt(), Decrypt()
+// of a private key will work.
+func TestPrivateKeyEncryptThenDecrypt(t *testing.T) {
+	for i, test := range privateKeyTests {
+		packet, err := Read(readerFromHex(test.privateKeyHex))
+		if err != nil {
+			t.Errorf("#%d: failed to parse: %s", i, err)
+			continue
+		}
+
+		privKey := packet.(*PrivateKey)
+		if err = privKey.Decrypt(oldPassphrase); err != nil || privKey.Encrypted {
+			t.Errorf("#%d: failed to decrypt: %s", i, err)
+			continue
+		}
+		if err = privKey.Encrypt(oldPassphrase, nil); err != nil || !privKey.Encrypted {
+			t.Errorf("#%d: failed to encrypt: %s", i, err)
+			continue
+		}
+		if err = privKey.Decrypt(oldPassphrase); err != nil || privKey.Encrypted {
+			t.Errorf("#%d: failed to decrypt: %s", i, err)
 		}
 	}
 }

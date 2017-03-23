@@ -193,6 +193,10 @@ func (pk *PrivateKey) Encrypt(passphrase []byte, config *Config) (err error) {
 	}
 
 	pk.s2kHeader = s2kBuf.Bytes()
+	// No good way to set pk.s2k but to call s2k.Parse(),
+	// even though we have all the information here, but
+	// most of the functions needed are private to s2k.
+	pk.s2k, err = s2k.Parse(s2kBuf)
 	pk.iv = make([]byte, pk.cipher.blockSize())
 	if _, err = config.Random().Read(pk.iv); err != nil {
 		return err
