@@ -110,6 +110,40 @@ func TestPrivateKeyEncrypt(t *testing.T) {
 	}
 }
 
+func TestPrivateKeyReadAndSerailze(t *testing.T) {
+	for i, test := range privateKeyTests {
+		packet, err := Read(readerFromHex(test.privateKeyHex))
+		if err != nil {
+			t.Errorf("#%d: failed to parse: %s", i, err)
+			continue
+		}
+
+		privKey := packet.(*PrivateKey)
+		if err = privKey.Decrypt(oldPassphrase); err != nil {
+			t.Errorf("#%d: failed to decrypt private key: %s", i, err)
+			continue
+		}
+		t.Logf("#%d: privKey=%#v", i, privKey)
+		outBuf := bytes.NewBuffer(nil)
+		if err = privKey.Serialize(outBuf); err != nil {
+			t.Errorf("#%d: failed to serialize: %s", i, err)
+			continue
+		}
+
+		// The private key is no longer encrypted. Make sure
+		// we can parse it.
+		packet2, err := Read(outBuf)
+		if err != nil {
+			t.Errorf("#%d: failed to parse serialized form: %s", i, err)
+			continue
+		}
+		privKey2 := packet2.(*PrivateKey)
+		if privKey2.Encrypted {
+			t.Errorf("#%d: privKey2 should not be encrypted", i)
+		}
+	}
+}
+
 func TestIssue11505(t *testing.T) {
 	// parsing a rsa private key with p or q == 1 used to panic due to a divide by zero
 	_, _ = Read(readerFromHex("9c3004303030300100000011303030000000000000010130303030303030303030303030303030303030303030303030303030303030303030303030303030303030"))
