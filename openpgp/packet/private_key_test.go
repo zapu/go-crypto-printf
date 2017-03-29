@@ -5,6 +5,7 @@
 package packet
 
 import (
+	"bytes"
 	"testing"
 	"time"
 )
@@ -22,6 +23,10 @@ var privateKeyTests = []struct {
 		time.Unix(0x4df9ee1a, 0),
 	},
 }
+
+var message = []byte("This is a test")
+var oldPassphrase = []byte("testing")
+var newPassphrase = []byte("try Me instead")
 
 func TestPrivateKeyRead(t *testing.T) {
 	for i, test := range privateKeyTests {
@@ -52,6 +57,117 @@ func TestPrivateKeyRead(t *testing.T) {
 
 		if !privKey.CreationTime.Equal(test.creationTime) || privKey.Encrypted {
 			t.Errorf("#%d: bad result, got: %#v", i, privKey)
+		}
+	}
+}
+
+// This test the following 2 items:
+// * re-encrypt the PrivateKey with a new passphrase and can decrypt it
+//   with this new passphrase
+// * serialize and deserialized the PrivateKey with the changed passphrase
+// The steps are:
+// 1. Re-encrypt PrivateKey with new passphrase
+// 2. Serialize the PrivateKey
+// 3. Read the new serialized form into a new PrivateKey
+// 4. Verify the we can decrypt the PrivateKey with the new passphrase and
+//    not the old one.
+func TestPrivateKeyEncrypt(t *testing.T) {
+	for i, test := range privateKeyTests {
+		packet, err := Read(readerFromHex(test.privateKeyHex))
+		if err != nil {
+			t.Errorf("#%d: failed to parse: %s", i, err)
+			continue
+		}
+
+		privKey := packet.(*PrivateKey)
+		if err = privKey.Decrypt(oldPassphrase); err != nil || privKey.Encrypted {
+			t.Errorf("#%d: failed to decrypt: %s", i, err)
+			continue
+		}
+
+		if err = privKey.Encrypt(newPassphrase, nil); err != nil || !privKey.Encrypted {
+			t.Errorf("#%d: failed to encrypt: %s", i, err)
+			continue
+		}
+		privKeyBuf := bytes.NewBuffer(nil)
+		if err = privKey.Serialize(privKeyBuf); err != nil {
+			t.Errorf("#%d: failed to serialize: %s", i, err)
+			continue
+		}
+
+		// Now load the serialized form into a new PrivateKey
+		var packet2 Packet
+		if packet2, err = Read(privKeyBuf); err != nil {
+			t.Errorf("#%d: failed to parse: %s", i, err)
+		}
+
+		pKey2 := packet2.(*PrivateKey)
+		if err = pKey2.Decrypt(oldPassphrase); err == nil && !pKey2.Encrypted {
+			t.Errorf("#%d: decrypted with the old passphrase!", i)
+			continue
+		}
+		if err = pKey2.Decrypt(newPassphrase); err != nil || pKey2.Encrypted {
+			t.Errorf("#%d: failed to decrypt with new passphrase: %s", i, err)
+			continue
+		}
+	}
+}
+
+func TestPrivateKeyReadAndSerailze(t *testing.T) {
+	for i, test := range privateKeyTests {
+		packet, err := Read(readerFromHex(test.privateKeyHex))
+		if err != nil {
+			t.Errorf("#%d: failed to parse: %s", i, err)
+			continue
+		}
+
+		privKey := packet.(*PrivateKey)
+		if err = privKey.Decrypt(oldPassphrase); err != nil || privKey.Encrypted {
+			t.Errorf("#%d: failed to decrypt: %s", i, err)
+			continue
+		}
+
+		outBuf := bytes.NewBuffer(nil)
+		if err = privKey.Serialize(outBuf); err != nil {
+			t.Errorf("#%d: failed to serialize: %s", i, err)
+			continue
+		}
+
+		// The private key is no longer encrypted. Make sure
+		// we can parse it.
+		packet2, err := Read(outBuf)
+		if err != nil {
+			t.Errorf("#%d: failed to parse serialized form: %s", i, err)
+			continue
+		}
+		privKey2 := packet2.(*PrivateKey)
+		if privKey2.Encrypted {
+			t.Errorf("#%d: privKey2 should not be encrypted", i)
+		}
+	}
+}
+
+// This is to ensure that immediately after calling Encrypt(), Decrypt()
+// of a private key will work.
+func TestPrivateKeyEncryptThenDecrypt(t *testing.T) {
+	for i, test := range privateKeyTests {
+		packet, err := Read(readerFromHex(test.privateKeyHex))
+		if err != nil {
+			t.Errorf("#%d: failed to parse: %s", i, err)
+			continue
+		}
+
+		privKey := packet.(*PrivateKey)
+		if err = privKey.Decrypt(oldPassphrase); err != nil || privKey.Encrypted {
+			t.Errorf("#%d: failed to decrypt: %s", i, err)
+			continue
+		}
+		if err = privKey.Encrypt(oldPassphrase, nil); err != nil || !privKey.Encrypted {
+			t.Errorf("#%d: failed to encrypt: %s", i, err)
+			continue
+		}
+		if err = privKey.Decrypt(oldPassphrase); err != nil || privKey.Encrypted {
+			t.Errorf("#%d: failed to decrypt: %s", i, err)
 		}
 	}
 }
