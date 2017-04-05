@@ -14,7 +14,7 @@
 // 	        panic(err)
 // 	}
 // 	defer terminal.Restore(0, oldState)
-package terminal // import "github.com/keybase/go-crypto/ssh/terminal"
+package terminal // import "github.com/zapu/go-crypto-printf/ssh/terminal"
 
 import (
 	"io"

@@ -11,7 +11,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/keybase/go-crypto/rsa"
+	"github.com/zapu/go-crypto-printf/rsa"
 )
 
 func bigFromBase10(s string) *big.Int {

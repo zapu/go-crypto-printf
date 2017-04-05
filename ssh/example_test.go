@@ -12,8 +12,8 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/keybase/go-crypto/ssh"
-	"github.com/keybase/go-crypto/ssh/terminal"
+	"github.com/zapu/go-crypto-printf/ssh"
+	"github.com/zapu/go-crypto-printf/ssh/terminal"
 )
 
 func ExampleNewServerConn() {

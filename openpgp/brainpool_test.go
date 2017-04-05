@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keybase/go-crypto/openpgp/armor"
-	"github.com/keybase/go-crypto/openpgp/packet"
+	"github.com/zapu/go-crypto-printf/openpgp/armor"
+	"github.com/zapu/go-crypto-printf/openpgp/packet"
 )
 
 const msg = `Hello World!`

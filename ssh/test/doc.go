@@ -3,5 +3,5 @@
 // license that can be found in the LICENSE file.
 
 // This package contains integration tests for the
-// github.com/keybase/go-crypto/ssh package.
-package test // import "github.com/keybase/go-crypto/ssh/test"
+// github.com/zapu/go-crypto-printf/ssh package.
+package test // import "github.com/zapu/go-crypto-printf/ssh/test"

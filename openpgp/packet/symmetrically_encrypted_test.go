@@ -12,7 +12,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/keybase/go-crypto/openpgp/errors"
+	"github.com/zapu/go-crypto-printf/openpgp/errors"
 )
 
 // TestReader wraps a []byte and returns reads of a specific length.

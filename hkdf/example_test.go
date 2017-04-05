@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/keybase/go-crypto/hkdf"
+	"github.com/zapu/go-crypto-printf/hkdf"
 )
 
 // Usage example that expands one master key into three other cryptographically

@@ -6,12 +6,13 @@ package openpgp
 
 import (
 	"crypto/hmac"
-	"github.com/keybase/go-crypto/openpgp/armor"
-	"github.com/keybase/go-crypto/openpgp/errors"
-	"github.com/keybase/go-crypto/openpgp/packet"
-	"github.com/keybase/go-crypto/rsa"
+	"github.com/zapu/go-crypto-printf/openpgp/armor"
+	"github.com/zapu/go-crypto-printf/openpgp/errors"
+	"github.com/zapu/go-crypto-printf/openpgp/packet"
+	"github.com/zapu/go-crypto-printf/rsa"
 	"io"
 	"time"
+	"fmt"
 )
 
 // PublicKeyType is the armor type for a PGP public key.
@@ -400,13 +401,19 @@ func readToNextPublicKey(packets *packet.Reader) (err error) {
 // ReadEntity reads an entity (public key, identities, subkeys etc) from the
 // given Reader.
 func ReadEntity(packets *packet.Reader) (*Entity, error) {
+	fmt.Printf(":: ReadEntity (%v)\n", packets)
+	defer fmt.Printf(":: ReadEntity end\n")
+
 	e := new(Entity)
 	e.Identities = make(map[string]*Identity)
 
 	p, err := packets.Next()
 	if err != nil {
+		fmt.Printf("first packets.Next(): error %v\n", err)
 		return nil, err
 	}
+
+	fmt.Printf("First packet is %T\n", p)
 
 	var ok bool
 	if e.PrimaryKey, ok = p.(*packet.PublicKey); !ok {
@@ -428,10 +435,13 @@ EachPacket:
 	for {
 		p, err := packets.Next()
 		if err == io.EOF {
+			fmt.Printf("packets.Next(): EOF\n")
 			break
 		} else if err != nil {
+			fmt.Printf("packets.Next(): error %v\n", err)
 			return nil, err
 		}
+		fmt.Printf("Packet is: %T\n", p)
 		switch pkt := p.(type) {
 		case *packet.UserId:
 
@@ -441,18 +451,25 @@ EachPacket:
 			current = new(Identity)
 			current.Name = pkt.Id
 			current.UserId = pkt
+			fmt.Printf("current set as userid: %v\n", current.Name)
 		case *packet.Signature:
+			fmt.Printf("Sig Type is: 0x%x\n", pkt.SigType)
+			if pkt.IssuerKeyId != nil {
+				fmt.Printf("Issuer is: %x\n", *pkt.IssuerKeyId)
+			}
 
 			// These are signatures by other people on this key. Let's just ignore them
 			// from the beginning, since they shouldn't affect our key decoding one way
 			// or the other.
 			if pkt.IssuerKeyId != nil && *pkt.IssuerKeyId != e.PrimaryKey.KeyId {
+				fmt.Printf("IssuerKeyId is: %x != %x, moving on to next packet.\n", *pkt.IssuerKeyId, e.PrimaryKey.KeyId)
 				continue
 			}
 
 			// If this is a signature made by the keyholder, and the signature has stubbed out
 			// critical packets, then *now* we need to bail out.
 			if e := pkt.StubbedOutCriticalError; e != nil {
+				fmt.Printf("pkt.StubbedOutCriticalError, bye\n")
 				return nil, e
 			}
 
@@ -496,17 +513,21 @@ EachPacket:
 					// won't be undone. We've preserved this feature from the original
 					// Google OpenPGP we forked from.
 					e.Identities[current.Name] = current
+					fmt.Printf("uid %v verified, adding to e.Identities (len: %d)\n", current.Name, len(e.Identities))
 				} else {
 					// We really should warn that there was a failure here. Not raise an error
 					// since this really shouldn't be a fail-stop error.
+					fmt.Printf("Signature for uid %v failed\n", current.Name)
 				}
 			} else if pkt.SigType == packet.SigTypeKeyRevocation {
 				// These revocations won't revoke UIDs as handled above, so lookout!
 				revocations = append(revocations, pkt)
+				fmt.Printf("Key Revocation (len: %d)\n", len(revocations))
 			} else if pkt.SigType == packet.SigTypeDirectSignature {
 				// TODO: RFC4880 5.2.1 permits signatures
 				// directly on keys (eg. to bind additional
 				// revocation keys).
+				fmt.Printf("DirectSignature (unsupported)\n")
 			} else if current == nil {
 				// NOTE(maxtaco)
 				//
@@ -520,10 +541,12 @@ EachPacket:
 				// Used to be:
 				//    return nil, errors.StructuralError("signature packet found before user id packet")
 			} else {
+				fmt.Printf("Appending to signature: len: %d\n", len(current.Signatures))
 				current.Signatures = append(current.Signatures, pkt)
 			}
 		case *packet.PrivateKey:
 			if pkt.IsSubkey == false {
+				fmt.Printf("Is not subkey - unreading and exiting")
 				packets.Unread(p)
 				break EachPacket
 			}
@@ -533,6 +556,7 @@ EachPacket:
 			}
 		case *packet.PublicKey:
 			if pkt.IsSubkey == false {
+				fmt.Printf("Is not subkey - unreading and exiting")
 				packets.Unread(p)
 				break EachPacket
 			}
@@ -546,6 +570,7 @@ EachPacket:
 	}
 
 	if len(e.Identities) == 0 {
+		fmt.Printf("No identities :(\n")
 		return nil, errors.StructuralError("entity without any identities")
 	}
 
@@ -553,16 +578,22 @@ EachPacket:
 		err = e.PrimaryKey.VerifyRevocationSignature(revocation)
 		if err == nil {
 			e.Revocations = append(e.Revocations, revocation)
+			fmt.Printf("Verified revocation\n")
 		} else {
 			// TODO: RFC 4880 5.2.3.15 defines revocation keys.
+			fmt.Printf("\"revocation signature signed by alternate key\"\n")
 			return nil, errors.StructuralError("revocation signature signed by alternate key")
 		}
 	}
 
+	fmt.Printf("All fine: Returning entity\n")
 	return e, nil
 }
 
 func addSubkey(e *Entity, packets *packet.Reader, pub *packet.PublicKey, priv *packet.PrivateKey) error {
+	fmt.Printf(":: addSubkey (%v)\n", packets)
+	defer fmt.Printf(":: addSubkey end\n")
+
 	var subKey Subkey
 	subKey.PublicKey = pub
 	subKey.PrivateKey = priv
@@ -575,6 +606,7 @@ func addSubkey(e *Entity, packets *packet.Reader, pub *packet.PublicKey, priv *p
 		if err != nil {
 			return errors.StructuralError("subkey signature invalid: " + err.Error())
 		}
+		fmt.Printf("Packet is: %T\n", p)
 		sig, ok := p.(*packet.Signature)
 		if !ok {
 			// Hit a non-signature packet, so assume we're up to the next key
@@ -588,7 +620,7 @@ func addSubkey(e *Entity, packets *packet.Reader, pub *packet.PublicKey, priv *p
 			// packets that are in the wrong place (like misplaced 0x13 signatures)
 			// until we get to one that works.  For a test case,
 			// see TestWithBadSubkeySignaturePackets.
-
+			fmt.Printf("Unexpected sig type: %v\n", st)
 			continue
 		}
 		err = e.PrimaryKey.VerifyKeySignature(subKey.PublicKey, sig)
@@ -603,22 +635,26 @@ func addSubkey(e *Entity, packets *packet.Reader, pub *packet.PublicKey, priv *p
 			// Does the "new" sig set expiration to later date than
 			// "previous" sig?
 			if subKey.Sig == nil || subKey.Sig.ExpiresBeforeOther(sig) {
+				fmt.Printf("Setting Sig.\n")
 				subKey.Sig = sig
 			}
 		case packet.SigTypeSubkeyRevocation:
 			// First writer wins
 			if subKey.Revocation == nil {
+				fmt.Printf("Setting Revocation.\n")
 				subKey.Revocation = sig
 			}
 		}
 	}
 	if subKey.Sig != nil {
 		e.Subkeys = append(e.Subkeys, subKey)
+		fmt.Printf("Got sig, adding to subkeys: %d\n", len(e.Subkeys))
 	} else {
 		if lastErr == nil {
 			lastErr = errors.StructuralError("Subkey wasn't signed; expected a 'binding' signature")
 		}
 		e.BadSubkeys = append(e.BadSubkeys, BadSubkey{Subkey: subKey, Err: lastErr})
+		fmt.Printf("*No* sig, adding to bad subkeys: %d\n", len(e.BadSubkeys))
 	}
 	return nil
 }

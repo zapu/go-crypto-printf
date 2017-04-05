@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/keybase/go-crypto/openpgp/armor"
-	"github.com/keybase/go-crypto/openpgp/errors"
-	"github.com/keybase/go-crypto/openpgp/packet"
+	"github.com/zapu/go-crypto-printf/openpgp/armor"
+	"github.com/zapu/go-crypto-printf/openpgp/errors"
+	"github.com/zapu/go-crypto-printf/openpgp/packet"
 )
 
 func readerFromHex(s string) io.Reader {

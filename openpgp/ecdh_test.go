@@ -2,8 +2,8 @@ package openpgp
 
 import (
 	"bytes"
-	"github.com/keybase/go-crypto/openpgp/armor"
-	"github.com/keybase/go-crypto/openpgp/packet"
+	"github.com/zapu/go-crypto-printf/openpgp/armor"
+	"github.com/zapu/go-crypto-printf/openpgp/packet"
 	"io"
 	"io/ioutil"
 	"strings"

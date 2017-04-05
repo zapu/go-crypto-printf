@@ -10,7 +10,7 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/keybase/go-crypto/ssh"
+	"github.com/zapu/go-crypto-printf/ssh"
 )
 
 func TestCertLogin(t *testing.T) {

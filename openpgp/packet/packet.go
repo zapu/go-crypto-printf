@@ -4,7 +4,7 @@
 
 // Package packet implements parsing and serialization of OpenPGP packets, as
 // specified in RFC 4880.
-package packet // import "github.com/keybase/go-crypto/openpgp/packet"
+package packet // import "github.com/zapu/go-crypto-printf/openpgp/packet"
 
 import (
 	"bufio"
@@ -15,8 +15,8 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/keybase/go-crypto/cast5"
-	"github.com/keybase/go-crypto/openpgp/errors"
+	"github.com/zapu/go-crypto-printf/cast5"
+	"github.com/zapu/go-crypto-printf/openpgp/errors"
 )
 
 // readFull is the same as io.ReadFull except that reading zero bytes returns

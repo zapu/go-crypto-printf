@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/keybase/go-crypto/ssh"
+	"github.com/zapu/go-crypto-printf/ssh"
 )
 
 func TestRunCommandSuccess(t *testing.T) {

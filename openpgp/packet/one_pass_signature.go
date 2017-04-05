@@ -10,8 +10,8 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/keybase/go-crypto/openpgp/errors"
-	"github.com/keybase/go-crypto/openpgp/s2k"
+	"github.com/zapu/go-crypto-printf/openpgp/errors"
+	"github.com/zapu/go-crypto-printf/openpgp/s2k"
 )
 
 // OnePassSignature represents a one-pass signature packet. See RFC 4880,

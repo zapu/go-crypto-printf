@@ -14,7 +14,7 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/keybase/go-crypto/curve25519"
+	"github.com/zapu/go-crypto-printf/curve25519"
 )
 
 const (

@@ -4,7 +4,7 @@
 
 // Package s2k implements the various OpenPGP string-to-key transforms as
 // specified in RFC 4800 section 3.7.1.
-package s2k // import "github.com/keybase/go-crypto/openpgp/s2k"
+package s2k // import "github.com/zapu/go-crypto-printf/openpgp/s2k"
 
 import (
 	"crypto"
@@ -12,7 +12,7 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/keybase/go-crypto/openpgp/errors"
+	"github.com/zapu/go-crypto-printf/openpgp/errors"
 )
 
 // Config collects configuration parameters for s2k key-stretching

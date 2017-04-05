@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Package openpgp implements high level operations on OpenPGP messages.
-package openpgp // import "github.com/keybase/go-crypto/openpgp"
+package openpgp // import "github.com/zapu/go-crypto-printf/openpgp"
 
 import (
 	"crypto"
@@ -13,9 +13,9 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/keybase/go-crypto/openpgp/armor"
-	"github.com/keybase/go-crypto/openpgp/errors"
-	"github.com/keybase/go-crypto/openpgp/packet"
+	"github.com/zapu/go-crypto-printf/openpgp/armor"
+	"github.com/zapu/go-crypto-printf/openpgp/errors"
+	"github.com/zapu/go-crypto-printf/openpgp/packet"
 )
 
 // SignatureType is the armor type for a PGP signature.

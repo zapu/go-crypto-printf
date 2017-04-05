@@ -10,7 +10,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/keybase/go-crypto/ssh"
+	"github.com/zapu/go-crypto-printf/ssh"
 )
 
 // RequestAgentForwarding sets up agent forwarding for the session.

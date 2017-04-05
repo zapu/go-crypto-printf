@@ -12,7 +12,7 @@ import (
 	"log"
 	"math/big"
 
-	"github.com/keybase/go-crypto/ssh"
+	"github.com/zapu/go-crypto-printf/ssh"
 )
 
 // Server wraps an Agent and uses it to implement the agent side of

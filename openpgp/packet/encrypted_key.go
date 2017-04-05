@@ -10,10 +10,10 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/keybase/go-crypto/openpgp/ecdh"
-	"github.com/keybase/go-crypto/openpgp/elgamal"
-	"github.com/keybase/go-crypto/openpgp/errors"
-	"github.com/keybase/go-crypto/rsa"
+	"github.com/zapu/go-crypto-printf/openpgp/ecdh"
+	"github.com/zapu/go-crypto-printf/openpgp/elgamal"
+	"github.com/zapu/go-crypto-printf/openpgp/errors"
+	"github.com/zapu/go-crypto-printf/rsa"
 )
 
 const encryptedKeyVersion = 3

@@ -7,7 +7,7 @@ import (
 	"crypto/elliptic"
 	"encoding/binary"
 	"errors"
-	"github.com/keybase/go-crypto/curve25519"
+	"github.com/zapu/go-crypto-printf/curve25519"
 	"io"
 	"math/big"
 )

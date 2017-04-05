@@ -16,7 +16,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/keybase/go-crypto/ssh/terminal"
+	"github.com/zapu/go-crypto-printf/ssh/terminal"
 )
 
 type serverType func(Channel, <-chan *Request, *testing.T)

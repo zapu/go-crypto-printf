@@ -21,13 +21,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/keybase/go-crypto/brainpool"
-	"github.com/keybase/go-crypto/curve25519"
-	"github.com/keybase/go-crypto/ed25519"
-	"github.com/keybase/go-crypto/openpgp/ecdh"
-	"github.com/keybase/go-crypto/openpgp/elgamal"
-	"github.com/keybase/go-crypto/openpgp/errors"
-	"github.com/keybase/go-crypto/rsa"
+	"github.com/zapu/go-crypto-printf/brainpool"
+	"github.com/zapu/go-crypto-printf/curve25519"
+	"github.com/zapu/go-crypto-printf/ed25519"
+	"github.com/zapu/go-crypto-printf/openpgp/ecdh"
+	"github.com/zapu/go-crypto-printf/openpgp/elgamal"
+	"github.com/zapu/go-crypto-printf/openpgp/errors"
+	"github.com/zapu/go-crypto-printf/rsa"
 )
 
 var (

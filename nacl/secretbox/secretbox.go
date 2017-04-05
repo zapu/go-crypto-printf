@@ -18,8 +18,8 @@ This package is interoperable with NaCl: http://nacl.cr.yp.to/secretbox.html.
 package secretbox
 
 import (
-	"github.com/keybase/go-crypto/poly1305"
-	"github.com/keybase/go-crypto/salsa20/salsa"
+	"github.com/zapu/go-crypto-printf/poly1305"
+	"github.com/zapu/go-crypto-printf/salsa20/salsa"
 )
 
 // Overhead is the number of bytes of overhead when boxing a message.
